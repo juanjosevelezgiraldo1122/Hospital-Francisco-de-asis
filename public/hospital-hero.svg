@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="Hospital Francisco de Asís">
+  <rect width="1600" height="900" fill="#0b3158"/>
+  <rect x="0" y="0" width="1600" height="900" fill="#124a7c" opacity=".42"/>
+  <path d="M0 760h1600v140H0z" fill="#1f2933" opacity=".52"/>
+  <path d="M890 120h420c56 0 102 46 102 102v496H788V222c0-56 46-102 102-102z" fill="#e2f4ff" opacity=".18"/>
+  <path d="M940 186h320v452H940z" fill="#f3fbff" opacity=".20"/>
+  <path d="M990 230h82v86h-82zm132 0h82v86h-82zm-132 130h82v86h-82zm132 0h82v86h-82zm-132 130h82v86h-82zm132 0h82v86h-82z" fill="#8ed8ff" opacity=".54"/>
+  <path d="M1052 640h90v118h-90z" fill="#0b3158" opacity=".8"/>
+  <path d="M1350 322c-42 0-76 34-76 76v330h152V398c0-42-34-76-76-76z" fill="#bfe8ff" opacity=".28"/>
+  <path d="M142 678c76-138 174-206 294-206s218 68 294 206H142z" fill="#bfe8ff" opacity=".18"/>
+  <path d="M360 278h126v126h126v126H486v126H360V530H234V404h126z" fill="#f3fbff" opacity=".76"/>
+  <path d="M100 780c206-68 438-68 696 0 266 70 490 72 704 8" fill="none" stroke="#8ed8ff" stroke-width="18" opacity=".22"/>
+  <path d="M76 96h462" stroke="#f3fbff" stroke-width="2" opacity=".15"/>
+  <path d="M76 128h340" stroke="#f3fbff" stroke-width="2" opacity=".12"/>
+  <circle cx="1290" cy="230" r="128" fill="#ffffff" opacity=".10"/>
+  <circle cx="1290" cy="230" r="78" fill="#8ed8ff" opacity=".12"/>
+</svg>

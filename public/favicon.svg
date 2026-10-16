@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-labelledby="title">
+  <title id="title">Hospital Francisco de Asís</title>
+  <rect width="48" height="48" rx="8" fill="#f3fbff"/>
+  <path d="M9 42V18L24 7l15 11v24H9z" fill="#bfe8ff" stroke="#0b3158" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M24 17v16M16 25h16" stroke="#0b3158" stroke-width="5" stroke-linecap="round"/>
+  <path d="M12 41h24" stroke="#124a7c" stroke-width="3" stroke-linecap="round"/>
+  <rect x="20" y="33" width="8" height="9" rx="2" fill="#ffffff" stroke="#0b3158" stroke-width="2"/>
+</svg>
