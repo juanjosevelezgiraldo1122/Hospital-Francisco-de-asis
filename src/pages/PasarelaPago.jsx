@@ -39,12 +39,12 @@ export default function PasarelaPago() {
     setMessage('');
   };
 
-  const submitPayment = (event) => {
+  const submitPayment = async (event) => {
     event.preventDefault();
     if (!delivery || delivery.status === 'Pago confirmado') return;
 
     const cleanCard = payment.cardNumber.replace(/\D/g, '');
-    payDelivery(delivery.id, {
+    const result = await payDelivery(delivery.id, {
       paymentProvider: payment.provider,
       transactionCode: `SMU-${Date.now().toString().slice(-8)}`,
       payerName: payment.holder,
@@ -52,6 +52,7 @@ export default function PasarelaPago() {
       cardLast4: cleanCard.slice(-4),
       amount: deliveryCost,
     });
+    if (!result.ok) { setMessage(result.message); return; }
     setMessage('Pago confirmado. El domicilio queda listo para preparacion y despacho.');
   };
 

@@ -3,7 +3,6 @@ import { CalendarCheck, CalendarX2, Clock, MapPin, Stethoscope } from 'lucide-re
 import { useAppData } from '../store';
 
 const availableTimes = ['07:00', '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-const sedes = ['Sede Norte', 'Sede Centro', 'Sede Universitaria'];
 const today = new Date().toISOString().slice(0, 10);
 
 const blankForm = {
@@ -62,7 +61,7 @@ export default function Citas() {
     setError('');
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     setMessage('');
     setError('');
@@ -73,7 +72,7 @@ export default function Citas() {
       return;
     }
 
-    const result = createAppointment(form);
+    const result = await createAppointment(form);
     if (!result.ok) {
       setError(result.message);
       return;
@@ -83,9 +82,10 @@ export default function Citas() {
     setForm(blankForm);
   };
 
-  const cancelAppointment = (appointmentId) => {
-    updateAppointment(appointmentId, { status: 'Cancelada', cancellationDate: new Date().toISOString() });
-    setMessage('Cita cancelada. El horario vuelve a quedar disponible.');
+  const cancelAppointment = async (appointmentId) => {
+    const result = await updateAppointment(appointmentId, { status: 'Cancelada' });
+    if (result.ok) setMessage('Cita cancelada. El horario vuelve a quedar disponible.');
+    else setError(result.message);
   };
 
   return (
@@ -142,9 +142,9 @@ export default function Citas() {
                 Sede *
                 <select value={form.sede} onChange={(event) => updateForm('sede', event.target.value)} required>
                   <option value="">Seleccionar sede</option>
-                  {sedes.map((sede) => (
-                    <option value={sede} key={sede}>
-                      {sede}
+                  {data.sedes.map((site) => (
+                    <option value={site.name} key={site.id}>
+                      {site.name}
                     </option>
                   ))}
                 </select>

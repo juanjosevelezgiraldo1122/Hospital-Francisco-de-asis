@@ -1,30 +1,41 @@
 import { useMemo, useState } from 'react';
 import { BadgeCheck, Mail, MapPin, Phone, Search, ShieldCheck, UserRound } from 'lucide-react';
-import { appointments, patients, prescriptions } from '../medicalData';
+import { useAppData } from '../store';
 
 export default function Pacientes() {
+  const { data } = useAppData();
   const [query, setQuery] = useState('');
   const [medicineQuery, setMedicineQuery] = useState('');
-  const [selectedDocument, setSelectedDocument] = useState(patients[0].document);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
 
   const filteredPatients = useMemo(
     () =>
-      patients.filter((patient) =>
+      data.patients.filter((patient) =>
         `${patient.name} ${patient.document} ${patient.email}`.toLowerCase().includes(query.toLowerCase()),
       ),
-    [query],
+    [data.patients, query],
   );
 
-  const selectedPatient =
-    patients.find((patient) => patient.document === selectedDocument) || filteredPatients[0] || patients[0];
+  const selectedPatient = data.patients.find((patient) => patient.id === selectedPatientId) || filteredPatients[0] || null;
 
-  const patientAppointments = appointments.filter((appointment) => appointment.document === selectedPatient.document);
-  const patientPrescriptions = prescriptions.filter(
-    (prescription) => prescription.patientDocument === selectedPatient.document,
-  );
+  const patientAppointments = selectedPatient ? data.appointments.filter((appointment) => appointment.patientId === selectedPatient.id) : [];
+  const patientPrescriptions = selectedPatient ? data.prescriptions.filter((prescription) => prescription.patientId === selectedPatient.id) : [];
   const visiblePrescriptions = patientPrescriptions.filter((prescription) =>
     `${prescription.medicine} ${prescription.dose || ''}`.toLocaleLowerCase().includes(medicineQuery.trim().toLocaleLowerCase()),
   );
+
+  if (!selectedPatient) {
+    return (
+      <section className="page-content patient-console">
+        <header className="module-header patient-header">
+          <div><span className="eyebrow">Ficha y trazabilidad</span><h1>Pacientes registrados</h1><p>Los registros se consultan directamente desde MySQL.</p></div>
+          <div className="module-chip"><ShieldCheck size={24} />MySQL</div>
+        </header>
+        <label className="search-box"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, documento o correo" /></label>
+        <p className="empty-state">{data.patients.length ? 'No hay pacientes que coincidan con la búsqueda.' : 'No hay pacientes disponibles para tu cuenta.'}</p>
+      </section>
+    );
+  }
 
   return (
     <section className="page-content patient-console">
@@ -57,9 +68,9 @@ export default function Pacientes() {
             {filteredPatients.map((patient) => (
               <button
                 type="button"
-                className={patient.document === selectedPatient.document ? 'active' : ''}
-                key={patient.document}
-                onClick={() => setSelectedDocument(patient.document)}
+                className={patient.id === selectedPatient.id ? 'active' : ''}
+                key={patient.id}
+                onClick={() => setSelectedPatientId(patient.id)}
               >
                 <UserRound size={20} />
                 <span>

@@ -12,7 +12,6 @@ const oauthStates = new Map();
 const oauthTickets = new Map();
 const loginAttempts = new Map();
 const resetAttempts = new Map();
-const authSessions = new Map();
 const sessionCookieName = 'hf_portal_session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 const resetWindowMs = 15 * 60 * 1000;
@@ -84,19 +83,24 @@ const cookieValue = (request, name) => {
 };
 const cookieHeader = (provider, value, maxAge) => `${cookieName(provider)}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
 const sessionCookie = (value, maxAge = 12 * 60 * 60) => `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
-const issueSession = (userId) => {
+const issueSession = async (userId) => {
   const token = randomToken(32);
-  authSessions.set(token, { userId: Number(userId), expiresAt: Date.now() + sessionDurationMs });
+  const tokenHash = resetTokenHash(token);
+  await pool.execute(
+    'INSERT INTO app_session (ID_USUARIO, TOKEN_HASH, EXPIRES_AT) VALUES (?, ?, DATE_ADD(NOW(3), INTERVAL 12 HOUR))',
+    [Number(userId), tokenHash],
+  );
   return token;
 };
-const activeSession = (request) => {
+const activeSession = async (request) => {
   const token = cookieValue(request, sessionCookieName);
-  const session = authSessions.get(token);
-  if (!session || session.expiresAt <= Date.now()) {
-    authSessions.delete(token);
-    return null;
-  }
-  return { token, ...session };
+  if (!token) return null;
+  const tokenHash = resetTokenHash(token);
+  const [rows] = await pool.execute(
+    'SELECT ID_SESSION, ID_USUARIO FROM app_session WHERE TOKEN_HASH = ? AND EXPIRES_AT > NOW(3) LIMIT 1',
+    [tokenHash],
+  );
+  return rows[0] ? { token, tokenHash, sessionId: Number(rows[0].ID_SESSION), userId: Number(rows[0].ID_USUARIO) } : null;
 };
 const frontendRedirect = (query) => `${appOrigin}/login?${new URLSearchParams(query)}`;
 const roleName = (value) => ({ paciente: 'patient', medico: 'doctor', secretaria: 'secretary', administrador: 'admin' })[String(value || '').toLowerCase()] || 'patient';
@@ -117,6 +121,25 @@ const publicUser = (row) => ({
   eps: row.EPS || '',
   status: row.ESTADO,
 });
+
+export async function getAuthenticatedUser(request) {
+  if (!databaseConfigured) return null;
+  const session = await activeSession(request);
+  if (!session) return null;
+  const [rows] = await pool.execute(
+    `SELECT u.ID_USUARIO, u.TIPO_DOCUMENTO, u.NUMERO_DOCUMENTO, u.NOMBRE_1, u.NOMBRE_2,
+      u.APELLIDO_1, u.APELLIDO_2, u.EMAIL, u.USUARIO_LOGIN, u.TELEFONO, u.DIRECCION,
+      u.DIRECCION_TIPO_VIA, u.DIRECCION_NUMERO_VIA, u.DIRECCION_LETRA_VIA, u.DIRECCION_BIS,
+      u.DIRECCION_CUADRANTE_VIA, u.DIRECCION_NUMERO_CRUCE, u.DIRECCION_LETRA_CRUCE,
+      u.DIRECCION_CUADRANTE_CRUCE, u.DIRECCION_NUMERO_PLACA, u.DIRECCION_COMPLEMENTO,
+      u.BARRIO, u.MUNICIPIO, u.DEPARTAMENTO, u.FECHA_NACIMIENTO, p.EPS, u.ESTADO, r.NOMBRE AS ROL
+     FROM usuario u JOIN rol r ON r.ID_ROL = u.ID_ROL
+     LEFT JOIN paciente p ON p.ID_USUARIO = u.ID_USUARIO
+     WHERE u.ID_USUARIO = ? AND u.ESTADO = 'activo' LIMIT 1`,
+    [session.userId],
+  );
+  return rows[0] ? publicUser(rows[0]) : null;
+}
 
 const passwordHash = async (password) => {
   const salt = randomBytes(16);
@@ -174,7 +197,7 @@ const cleanExpired = () => {
   for (const [key, item] of loginAttempts) {
     if (now - item.startedAt > 10 * 60 * 1000) loginAttempts.delete(key);
   }
-  for (const [key, item] of authSessions) if (item.expiresAt <= now) authSessions.delete(key);
+  void now;
 };
 
 const limited = (request) => {
@@ -310,9 +333,19 @@ export async function handleAuthRequest(request, response, url) {
     return true;
   }
 
+  if (path === '/api/auth/session' && request.method === 'GET') {
+    try {
+      sendJson(response, 200, { user: await getAuthenticatedUser(request) });
+    } catch (error) {
+      console.error('Session lookup failed:', error.code || error.name || 'SessionError');
+      sendJson(response, 503, { error: 'No se pudo validar la sesión en MySQL.' });
+    }
+    return true;
+  }
+
   if (path === '/api/auth/logout' && request.method === 'POST') {
-    const session = activeSession(request);
-    if (session) authSessions.delete(session.token);
+    const session = await activeSession(request);
+    if (session) await pool.execute('DELETE FROM app_session WHERE ID_SESSION = ?', [session.sessionId]);
     sendJson(response, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
     return true;
   }
@@ -323,7 +356,7 @@ export async function handleAuthRequest(request, response, url) {
   }
 
   if (path === '/api/auth/profile/address' && request.method === 'PATCH') {
-    const session = activeSession(request);
+    const session = await activeSession(request);
     if (!session) {
       sendJson(response, 401, { error: 'La sesión venció. Inicia sesión nuevamente.' });
       return true;
@@ -366,6 +399,7 @@ export async function handleAuthRequest(request, response, url) {
           parts.crossQuadrant || null, parts.plateNumber, parts.complement || null,
           parts.neighborhood || null, parts.municipality, parts.department, session.userId],
       );
+      await pool.execute('INSERT INTO sync_event (EVENT_TYPE) VALUES (?)', ['profile.address.updated']);
       sendJson(response, 200, { address, addressParts: parts });
     } catch (error) {
       console.error('Profile address update failed:', error.code || error.name || 'ProfileError');
@@ -485,10 +519,54 @@ export async function handleAuthRequest(request, response, url) {
         sendJson(response, 401, { error: 'Credenciales incorrectas.' });
         return true;
       }
-      sendJson(response, 200, { user: publicUser(row) }, { 'Set-Cookie': sessionCookie(issueSession(row.ID_USUARIO)) });
+      sendJson(response, 200, { user: publicUser(row) }, { 'Set-Cookie': sessionCookie(await issueSession(row.ID_USUARIO)) });
     } catch (error) {
       console.error('Credential login failed:', error.code || error.name || 'AuthError');
       sendJson(response, 500, { error: 'No se pudo validar la cuenta en este momento.' });
+    }
+    return true;
+  }
+
+  if (path === '/api/auth/register' && request.method === 'POST') {
+    let connection;
+    try {
+      const body = await readJson(request);
+      const names = normalizeText(body.names, 80).trim().split(/\s+/);
+      const surnames = normalizeText(body.lastNames, 80).trim().split(/\s+/);
+      const typeId = normalizeText(body.typeId, 20).toUpperCase();
+      const document = normalizeText(body.document, 30).toUpperCase();
+      const email = normalizeText(body.email, 254).toLowerCase();
+      const phone = normalizeText(body.phone, 30);
+      const password = typeof body.password === 'string' ? body.password : '';
+      if (!names[0] || !surnames[0] || !['CC', 'TI', 'CE', 'PA', 'PEP'].includes(typeId) || !validDocument(document) || !/^\S+@\S+\.\S+$/.test(email) || !validPhone(phone) || password.length < 7 || password.length > 128) {
+        sendJson(response, 400, { error: 'Revisa nombres, documento, correo, teléfono y contraseña.' });
+        return true;
+      }
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      const username = await availableGoogleUsername(email, connection);
+      const [created] = await connection.execute(
+        `INSERT INTO usuario (TIPO_DOCUMENTO,NUMERO_DOCUMENTO,NOMBRE_1,NOMBRE_2,APELLIDO_1,APELLIDO_2,EMAIL,USUARIO_LOGIN,PASSWORD_HASH,TELEFONO,FECHA_NACIMIENTO,ID_ROL)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,101)`,
+        [typeId, document, names[0], names.slice(1).join(' ') || null, surnames[0], surnames.slice(1).join(' ') || null, email, username, await passwordHash(password), phone, body.birthDate || null],
+      );
+      await connection.execute('INSERT INTO paciente (ID_USUARIO,EPS) VALUES (?,?)', [created.insertId, normalizeText(body.eps, 120) || null]);
+      await connection.execute('INSERT INTO sync_event (EVENT_TYPE) VALUES (?)', ['user.registered']);
+      await connection.commit();
+      const [rows] = await pool.execute(
+        `SELECT u.*,p.EPS,r.NOMBRE AS ROL FROM usuario u JOIN paciente p ON p.ID_USUARIO=u.ID_USUARIO JOIN rol r ON r.ID_ROL=u.ID_ROL WHERE u.ID_USUARIO=?`,
+        [created.insertId],
+      );
+      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookie(await issueSession(created.insertId)) });
+    } catch (error) {
+      await connection?.rollback().catch(() => {});
+      if (error.code === 'ER_DUP_ENTRY') sendJson(response, 409, { error: 'El documento o correo ya está registrado.' });
+      else {
+        console.error('Patient registration failed:', error.code || error.name || 'RegistrationError');
+        sendJson(response, 500, { error: 'No se pudo crear la cuenta en MySQL.' });
+      }
+    } finally {
+      connection?.release();
     }
     return true;
   }
@@ -607,7 +685,7 @@ export async function handleAuthRequest(request, response, url) {
         return true;
       }
       oauthTickets.delete(ticket);
-      sendJson(response, 200, { user: publicUser(linked) }, { 'Set-Cookie': sessionCookie(issueSession(linked.ID_USUARIO)) });
+      sendJson(response, 200, { user: publicUser(linked) }, { 'Set-Cookie': sessionCookie(await issueSession(linked.ID_USUARIO)) });
     } catch (error) {
       console.error('OAuth account lookup failed:', error.code || error.name || 'AuthError');
       sendJson(response, 500, { error: 'No se pudo completar el inicio de sesión.' });
@@ -664,6 +742,7 @@ export async function handleAuthRequest(request, response, url) {
         'INSERT INTO identidad_proveedor (ID_USUARIO, PROVEEDOR, ID_SUBJECT, EMAIL_PROVEEDOR) VALUES (?, ?, ?, ?)',
         [userId, pending.provider, pending.profile.subject, pending.profile.email],
       );
+      await connection.execute('INSERT INTO sync_event (EVENT_TYPE) VALUES (?)', ['user.registered']);
       await connection.commit();
       oauthTickets.delete(ticket);
       const [rows] = await pool.execute(
@@ -677,7 +756,7 @@ export async function handleAuthRequest(request, response, url) {
          JOIN rol r ON r.ID_ROL = u.ID_ROL WHERE u.ID_USUARIO = ?`,
         [userId],
       );
-      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookie(issueSession(userId)) });
+      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookie(await issueSession(userId)) });
     } catch (error) {
       if (connection) await connection.rollback().catch(() => {});
       if (error.code === 'ER_DUP_ENTRY') {

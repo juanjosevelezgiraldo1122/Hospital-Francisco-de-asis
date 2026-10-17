@@ -61,7 +61,7 @@ const emptyForm = {
   license: '',
   specialty: 'Medicina General',
   medicalType: 'general',
-  sede: 'Sede Norte',
+  sede: '',
   password: '',
 };
 
@@ -121,14 +121,14 @@ export default function Administracion() {
     setMessage(null);
   };
 
-  const submitAccount = (event) => {
+  const submitAccount = async (event) => {
     event.preventDefault();
-    const result =
+    const result = await (
       accountType === 'doctor'
         ? addDoctor(form)
         : accountType === 'secretary'
           ? addSecretary(form)
-          : registerPatient(form, false);
+          : registerPatient(form, false));
 
     if (!result.ok) {
       setMessage({ type: 'error', text: result.message });
@@ -137,13 +137,13 @@ export default function Administracion() {
 
     setMessage({
       type: 'success',
-      text: `${roleLabels[accountType]} creado correctamente. Usuario: ${result.user.username} | Clave: ${result.user.password}`,
+      text: `${roleLabels[accountType]} creado correctamente. Usuario: ${result.username || form.username || form.document} | Clave: ${form.password}`,
     });
     setForm(emptyForm);
   };
 
-  const updateRole = (userId, role) => {
-    const result = updateUserRole(userId, role);
+  const updateRole = async (userId, role) => {
+    const result = await updateUserRole(userId, role);
     setMessage(
       result.ok
         ? { type: 'success', text: 'Rol actualizado y guardado. Las vistas relacionadas se sincronizaron.' }
@@ -173,9 +173,7 @@ export default function Administracion() {
       <label>
         Sede asignada
         <select value={form.sede} onChange={(event) => setValue('sede', event.target.value)}>
-          <option>Sede Norte</option>
-          <option>Sede Campus Salud</option>
-          <option>Sede Bienestar U</option>
+          {data.sedes.map((site) => <option key={site.id} value={site.name}>{site.name}</option>)}
         </select>
       </label>
     </>

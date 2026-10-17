@@ -43,27 +43,27 @@ export default function PanelMedicamentos() {
 
   const availableUnits = data.inventory.reduce((total, item) => total + item.stock, 0);
 
-  const saveStock = (medicine) => {
-    const result = updateInventoryStock(medicine, inventoryDraft[medicine]);
+  const saveStock = async (medicine) => {
+    const result = await updateInventoryStock(medicine, inventoryDraft[medicine]);
     setMessage(result.ok
       ? { type: 'success', text: `Existencias de ${medicine} actualizadas.` }
       : { type: 'error', text: result.message });
   };
 
-  const submitMedicine = (event) => {
+  const submitMedicine = async (event) => {
     event.preventDefault();
-    const result = addMedication(newMedicine);
+    const result = await addMedication(newMedicine);
     if (!result.ok) {
       setMessage({ type: 'error', text: result.message });
       return;
     }
     setNewMedicine('');
     setInventoryQuery('');
-    setMessage({ type: 'success', text: `${result.medicine} ya esta disponible para inventario y prescripcion.` });
+    setMessage({ type: 'success', text: `${newMedicine} ya está disponible para inventario y prescripción.` });
   };
 
-  const changeOrderStatus = (orderId, status) => {
-    const result = updateDeliveryStatus(orderId, status);
+  const changeOrderStatus = async (orderId, status) => {
+    const result = await updateDeliveryStatus(orderId, status);
     setMessage(result.ok
       ? { type: 'success', text: 'Estado del pedido actualizado.' }
       : { type: 'error', text: result.message });

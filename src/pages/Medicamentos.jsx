@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Home, PackageCheck, Pill, Search, Truck } from 'lucide-react';
-import { prescriptions as demoPrescriptions } from '../medicalData';
 import { useAppData } from '../store';
 
 const prescriptionKey = (prescription) =>
@@ -16,7 +15,7 @@ export default function Medicamentos() {
         ? data.prescriptions.filter((item) => item.patientId === currentUser.id)
         : data.prescriptions;
 
-    return realPrescriptions.length ? realPrescriptions : demoPrescriptions;
+    return realPrescriptions;
   }, [currentUser.id, currentUser.role, data.prescriptions]);
   const [selected, setSelected] = useState(null);
   const [medicineQuery, setMedicineQuery] = useState('');
@@ -53,11 +52,11 @@ export default function Medicamentos() {
     `${prescription.medicine} ${prescription.dose || ''} ${prescription.doctorName || ''}`.toLocaleLowerCase().includes(medicineQuery.trim().toLocaleLowerCase()),
   );
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (currentUser.role !== 'patient') return;
 
-    const result = createDelivery({
+    const result = await createDelivery({
       address: delivery.address,
       phone: delivery.phone,
       email: delivery.email,

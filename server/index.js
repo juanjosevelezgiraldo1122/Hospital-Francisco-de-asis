@@ -1,11 +1,26 @@
 import { createServer } from 'node:http';
+import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
+import { extname, resolve, sep } from 'node:path';
 import { GoogleGenAI } from '@google/genai';
 import { hospitalKnowledge } from '../shared/assistantKnowledge.js';
 import { checkDatabaseConnection, databaseConfigured, pool } from './db.js';
 import { handleAuthRequest } from './auth.js';
+import { handleLiveDataRequest } from './liveData.js';
 
-const host = process.env.API_HOST || '127.0.0.1';
-const port = Number(process.env.API_PORT || 3001);
+const host = process.env.HOST || process.env.API_HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+const port = Number(process.env.PORT || process.env.API_PORT || 3001);
+const staticRoot = resolve('dist');
+const contentTypes = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+};
 const apiKey = process.env.GEMINI_API_KEY;
 const client = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const rateLimits = new Map();
@@ -20,6 +35,48 @@ const sendJson = (response, status, body) => {
     'X-Content-Type-Options': 'nosniff',
   });
   response.end(JSON.stringify(body));
+};
+
+const serveFrontend = async (request, response, pathname) => {
+  if (!['GET', 'HEAD'].includes(request.method || '')) {
+    sendJson(response, 405, { error: 'Metodo no permitido.' });
+    return;
+  }
+
+  let relativePath;
+  try {
+    relativePath = decodeURIComponent(pathname).replace(/^\/+/, '');
+  } catch {
+    sendJson(response, 400, { error: 'Ruta invalida.' });
+    return;
+  }
+
+  let filePath = resolve(staticRoot, relativePath || 'index.html');
+  if (filePath !== staticRoot && !filePath.startsWith(`${staticRoot}${sep}`)) {
+    sendJson(response, 404, { error: 'Recurso no encontrado.' });
+    return;
+  }
+
+  try {
+    if (!(await stat(filePath)).isFile()) filePath = resolve(staticRoot, 'index.html');
+  } catch {
+    filePath = resolve(staticRoot, 'index.html');
+  }
+
+  try {
+    const fileInfo = await stat(filePath);
+    response.writeHead(200, {
+      'Content-Type': contentTypes[extname(filePath).toLowerCase()] || 'application/octet-stream',
+      'Content-Length': fileInfo.size,
+      'Cache-Control': filePath.endsWith('.html') ? 'no-cache' : 'public, max-age=31536000, immutable',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    });
+    if (request.method === 'HEAD') response.end();
+    else createReadStream(filePath).pipe(response);
+  } catch {
+    sendJson(response, 503, { error: 'La interfaz web no esta compilada. Ejecuta npm run build.' });
+  }
 };
 
 const readBody = (request) => new Promise((resolve, reject) => {
@@ -99,9 +156,14 @@ const server = createServer(async (request, response) => {
   }
 
   if (await handleAuthRequest(request, response, url)) return;
+  if (await handleLiveDataRequest(request, response, url)) return;
 
   if (url.pathname !== '/api/chat') {
-    sendJson(response, 404, { error: 'Ruta no encontrada.' });
+    if (url.pathname.startsWith('/api/')) {
+      sendJson(response, 404, { error: 'Ruta no encontrada.' });
+      return;
+    }
+    await serveFrontend(request, response, url.pathname);
     return;
   }
 

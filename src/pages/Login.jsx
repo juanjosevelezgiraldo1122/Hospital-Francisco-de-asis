@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, LockKeyhole, Mail, MailCheck, ShieldCheck, UserPlus } from 'lucide-react';
-import { seedCredentials, useAppData } from '../store';
+import { useAppData } from '../store';
 
 const emptyPatient = {
   typeId: 'CC', document: '', names: '', lastNames: '', email: '', phone: '',
@@ -28,7 +28,7 @@ async function readResponse(response) {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { currentUser, login, registerPatient, acceptAuthenticatedUser } = useAppData();
+  const { currentUser, acceptAuthenticatedUser } = useAppData();
   const [mode, setMode] = useState(() => new URLSearchParams(window.location.search).has('reset_token') ? 'reset' : 'login');
   const [access, setAccess] = useState({ identifier: '', password: '' });
   const [patient, setPatient] = useState(emptyPatient);
@@ -187,18 +187,9 @@ export default function Login() {
         navigate(result.user.role === 'secretary' ? '/secretaria' : '/', { replace: true });
         return;
       }
-      const localResult = login(access.identifier, access.password);
-      if (localResult.ok) {
-        navigate(localResult.user.role === 'secretary' ? '/secretaria' : '/', { replace: true });
-        return;
-      }
-      setMessage(response.status >= 500
-        ? result.error || 'No se pudo conectar con el servicio de acceso.'
-        : localResult.message || result.error || 'Credenciales incorrectas.');
+      setMessage(result.error || 'Credenciales incorrectas.');
     } catch {
-      const localResult = login(access.identifier, access.password);
-      if (localResult.ok) navigate(localResult.user.role === 'secretary' ? '/secretaria' : '/', { replace: true });
-      else setMessage('No se pudo conectar con el servicio de acceso. Intenta de nuevo.');
+      setMessage('No se pudo conectar con MySQL. Verifica el servicio e inténtalo de nuevo.');
     } finally {
       setBusy(false);
     }
@@ -264,7 +255,7 @@ export default function Login() {
     }
   };
 
-  const submitPatient = (event) => {
+  const submitPatient = async (event) => {
     event.preventDefault();
     if (patient.password.length < 7 || patient.password.length > 20) {
       setMessage('La contraseña debe tener entre 7 y 20 caracteres.');
@@ -274,12 +265,18 @@ export default function Login() {
       setMessage('La confirmación de contraseña no coincide.');
       return;
     }
-    const result = registerPatient(patient, true);
-    if (!result.ok) {
-      setMessage(result.message);
-      return;
+    setBusy(true);
+    try {
+      const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(patient) });
+      const result = await readResponse(response);
+      if (!response.ok) throw new Error(result.error || 'No se pudo crear la cuenta.');
+      await acceptAuthenticatedUser(result.user);
+      navigate('/');
+    } catch (error) {
+      setMessage(error.message || 'No se pudo crear la cuenta en MySQL.');
+    } finally {
+      setBusy(false);
     }
-    navigate('/');
   };
 
   const submitSocialAccount = async (event) => {
@@ -352,19 +349,6 @@ export default function Login() {
           <h1>Tu salud, en buenas manos.</h1>
           <p>Un espacio sencillo para gestionar tu atención, tus citas y el seguimiento de tus tratamientos.</p>
           <div className="login-trust"><ShieldCheck size={20} /><span>Atención conectada con el equipo del hospital</span></div>
-          <details className="login-demo-access">
-            <summary>Accesos de demostración</summary>
-            <div>
-              <span>Administrador · {seedCredentials.admin.user} · {seedCredentials.admin.password}</span>
-              <span>Médico · {seedCredentials.doctor.user} · {seedCredentials.doctor.password}</span>
-              <span>Secretaria · {seedCredentials.secretary.user} · {seedCredentials.secretary.password}</span>
-              <span>Paciente · {seedCredentials.patient.user} · {seedCredentials.patient.password}</span>
-              <button type="button" className="btn btn-secondary demo-patient-access" onClick={() => {
-                setModeValue('login');
-                setAccess({ identifier: seedCredentials.patient.user, password: seedCredentials.patient.password });
-              }}>Usar cuenta de paciente</button>
-            </div>
-          </details>
         </aside>
 
         <section className="login-panel" aria-labelledby="login-title">

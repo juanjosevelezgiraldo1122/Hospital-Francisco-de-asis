@@ -107,11 +107,11 @@ export default function Doctores() {
     }, pdfFilename(`hospital-fda-consulta-${record.patientDocument}-${record.date}`));
   };
 
-  const openConsultation = (appointment) => {
+  const openConsultation = async (appointment) => {
     setError('');
     setMessage('');
     setActiveAppointmentId(appointment.id);
-    const result = startAppointment(appointment.id);
+    const result = await startAppointment(appointment.id);
     if (!result.ok) {
       setError(result.message);
       return;
@@ -148,7 +148,7 @@ export default function Doctores() {
     }));
   };
 
-  const saveConsultation = (event) => {
+  const saveConsultation = async (event) => {
     event.preventDefault();
     if (!clinicalForm.symptoms || !clinicalForm.diagnosis || !clinicalForm.observations) {
       setError('Completa sintomas, diagnostico y observaciones antes de finalizar.');
@@ -158,7 +158,7 @@ export default function Doctores() {
       setError('Completa dosis, frecuencia y duracion de cada medicamento seleccionado.');
       return;
     }
-    const result = saveClinicalRecord({
+    const result = await saveClinicalRecord({
       appointmentId: consultationId,
       symptoms: clinicalForm.symptoms,
       diagnosis: clinicalForm.diagnosis,
@@ -173,9 +173,10 @@ export default function Doctores() {
     setMessage('Consulta finalizada. El historial y los medicamentos se actualizaron en tiempo real.');
   };
 
-  const cancelAppointment = (appointment) => {
-    updateAppointment(appointment.id, { status: 'Cancelada', cancellationDate: new Date().toISOString(), managedBy: currentUser.name });
-    setMessage('Cita cancelada.');
+  const cancelAppointment = async (appointment) => {
+    const result = await updateAppointment(appointment.id, { status: 'Cancelada' });
+    if (result.ok) setMessage('Cita cancelada.');
+    else setError(result.message);
     setError('');
   };
 

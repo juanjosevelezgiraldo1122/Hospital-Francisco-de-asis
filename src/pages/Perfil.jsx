@@ -70,16 +70,7 @@ export default function Perfil() {
     setAddressMessage('');
     setAddressError(false);
     try {
-      if (currentUser.databaseId) {
-        const response = await fetch('/api/auth/profile/address', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ addressParts: parts }),
-        });
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || 'No se pudo guardar la dirección.');
-      }
-      const updated = updateUserAddress(currentUser.id, parts);
+      const updated = await updateUserAddress(currentUser.id, parts);
       if (!updated.ok) throw new Error(updated.message);
       setEditingAddress(false);
       setAddressMessage('Dirección guardada.');

@@ -21,7 +21,6 @@ import { downloadHospitalPdf, pdfFilename } from '../utils/hospitalPdf';
 
 const today = new Date().toISOString().slice(0, 10);
 const availableTimes = ['07:00', '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-const sedes = ['Sede Norte', 'Sede Centro', 'Sede Universitaria'];
 const blankPatient = {
   typeId: 'CC', document: '', names: '', lastNames: '', email: '', phone: '', birthDate: '', eps: '',
 };
@@ -187,16 +186,16 @@ export default function Secretaria() {
     setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const savePatient = (event) => {
+  const savePatient = async (event) => {
     event.preventDefault();
     resetFeedback();
-    const result = registerPatientBySecretary(patientForm);
+    const result = await registerPatientBySecretary(patientForm);
     if (!result.ok) {
       setError(result.message);
       return;
     }
     setSelectedPatientId(result.patient.id);
-    setPatientQuery(result.patient.document);
+    setPatientQuery(patientForm.document);
     setIsPatientModalOpen(false);
     setMessage(`Paciente ${result.patient.name} registrado correctamente.`);
   };
@@ -236,16 +235,16 @@ export default function Secretaria() {
     resetFeedback();
   };
 
-  const saveAppointment = (event) => {
+  const saveAppointment = async (event) => {
     event.preventDefault();
     resetFeedback();
     if (!appointmentForm.patientId || !appointmentForm.doctorId || !appointmentForm.sede || !appointmentForm.date || !appointmentForm.time || !appointmentForm.reason) {
       setError('Completa paciente, medico, sede, fecha, hora y motivo.');
       return;
     }
-    const result = editingAppointmentId
+    const result = await (editingAppointmentId
       ? rescheduleAppointment(editingAppointmentId, appointmentForm)
-      : createAppointmentForSecretary(appointmentForm);
+      : createAppointmentForSecretary(appointmentForm));
     if (!result.ok) {
       setError(result.message);
       return;
@@ -255,13 +254,10 @@ export default function Secretaria() {
     setMessage(editingAppointmentId ? 'Reserva reprogramada correctamente.' : 'Cita creada y reservada correctamente.');
   };
 
-  const cancelReservation = (appointment) => {
-    updateAppointment(appointment.id, {
-      status: 'Cancelada',
-      cancellationDate: new Date().toISOString(),
-      managedBy: currentUser.name,
-    });
-    setMessage('Reserva cancelada y disponibilidad liberada.');
+  const cancelReservation = async (appointment) => {
+    const result = await updateAppointment(appointment.id, { status: 'Cancelada' });
+    if (result.ok) setMessage('Reserva cancelada y disponibilidad liberada.');
+    else setError(result.message);
     setError('');
   };
 
@@ -394,7 +390,7 @@ export default function Secretaria() {
               <label>Paciente<select value={appointmentForm.patientId} onChange={(event) => updateAppointmentForm('patientId', event.target.value)} required><option value="">Seleccionar paciente</option>{data.patients.map((patient) => <option value={patient.id} key={patient.id}>{patient.name} - {patient.document}</option>)}</select></label>
               {selectedAppointmentPatient ? <div className="appointment-patient-strip"><UserRound size={20} /><div><strong>{selectedAppointmentPatient.name}</strong><span>{selectedAppointmentPatient.document} - {selectedAppointmentPatient.phone} - {selectedAppointmentPatient.eps}</span></div></div> : null}
               <div className="form-grid two"><label>Tipo de atencion<select value={appointmentForm.attentionType} onChange={(event) => updateAppointmentForm('attentionType', event.target.value)}><option value="general">Medicina general</option><option value="especialista">Especialista</option></select></label><label>Medico<select value={appointmentForm.doctorId} onChange={(event) => updateAppointmentForm('doctorId', event.target.value)} required><option value="">Seleccionar medico</option>{activeDoctors.filter((doctor) => appointmentForm.attentionType === 'general' ? doctor.medicalType === 'general' : doctor.medicalType !== 'general').map((doctor) => <option value={doctor.id} key={doctor.id}>{doctor.name} - {doctor.specialty}</option>)}</select></label></div>
-              <div className="form-grid two"><label>Sede<select value={appointmentForm.sede} onChange={(event) => updateAppointmentForm('sede', event.target.value)} required><option value="">Seleccionar sede</option>{sedes.map((sede) => <option value={sede} key={sede}>{sede}</option>)}</select></label><label>Fecha<input type="date" min={today} value={appointmentForm.date} onChange={(event) => updateAppointmentForm('date', event.target.value)} required /></label></div>
+              <div className="form-grid two"><label>Sede<select value={appointmentForm.sede} onChange={(event) => updateAppointmentForm('sede', event.target.value)} required><option value="">Seleccionar sede</option>{data.sedes.map((site) => <option value={site.name} key={site.id}>{site.name}</option>)}</select></label><label>Fecha<input type="date" min={today} value={appointmentForm.date} onChange={(event) => updateAppointmentForm('date', event.target.value)} required /></label></div>
               <fieldset className="secretary-time-picker"><legend>Hora disponible</legend><div className="time-options">{(appointmentForm.doctorId ? availableForDoctor : availableTimes).map((time) => <button type="button" className={appointmentForm.time === time ? 'selected' : ''} key={time} disabled={!appointmentForm.doctorId} onClick={() => updateAppointmentForm('time', time)}>{time}</button>)}</div></fieldset>
               <label>Motivo de consulta<textarea value={appointmentForm.reason} onChange={(event) => updateAppointmentForm('reason', event.target.value)} required /></label>
               <div className="modal-actions"><button type="button" className="btn btn-secondary" onClick={() => setIsAppointmentModalOpen(false)}>Cancelar</button><button type="submit" className="btn btn-primary"><CalendarCheck size={18} />{editingAppointmentId ? 'Guardar cambio' : 'Confirmar reserva'}</button></div>
