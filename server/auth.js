@@ -12,7 +12,8 @@ const oauthStates = new Map();
 const oauthTickets = new Map();
 const loginAttempts = new Map();
 const resetAttempts = new Map();
-const sessionCookieName = 'hf_portal_session';
+const sessionCookieName = 'hf_portal_session_v2';
+const legacySessionCookieName = 'hf_portal_session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 const resetWindowMs = 15 * 60 * 1000;
 const resetLimit = 5;
@@ -82,7 +83,9 @@ const cookieValue = (request, name) => {
   return item ? decodeURIComponent(item.slice(name.length + 1)) : '';
 };
 const cookieHeader = (provider, value, maxAge) => `${cookieName(provider)}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
-const sessionCookie = (value, maxAge = 12 * 60 * 60) => `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+const secureCookie = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+const sessionCookie = (value) => `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth${secureCookie}`;
+const expiredSessionCookie = (name) => `${name}=; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secureCookie}`;
 const issueSession = async (userId) => {
   const token = randomToken(32);
   const tokenHash = resetTokenHash(token);
@@ -340,7 +343,13 @@ export async function handleAuthRequest(request, response, url) {
 
   if (path === '/api/auth/session' && request.method === 'GET') {
     try {
-      sendJson(response, 200, { user: await getAuthenticatedUser(request) });
+      const legacyToken = cookieValue(request, legacySessionCookieName);
+      if (databaseConfigured && legacyToken) {
+        await pool.execute('DELETE FROM app_session WHERE TOKEN_HASH = ?', [resetTokenHash(legacyToken)]);
+      }
+      sendJson(response, 200, { user: await getAuthenticatedUser(request) }, {
+        'Set-Cookie': expiredSessionCookie(legacySessionCookieName),
+      });
     } catch (error) {
       console.error('Session lookup failed:', error.code || error.name || 'SessionError');
       sendJson(response, 503, { error: 'No se pudo validar la sesión en MySQL.' });
@@ -349,9 +358,15 @@ export async function handleAuthRequest(request, response, url) {
   }
 
   if (path === '/api/auth/logout' && request.method === 'POST') {
-    const session = await activeSession(request);
+    const session = databaseConfigured ? await activeSession(request) : null;
     if (session) await pool.execute('DELETE FROM app_session WHERE ID_SESSION = ?', [session.sessionId]);
-    sendJson(response, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+    const legacyToken = cookieValue(request, legacySessionCookieName);
+    if (databaseConfigured && legacyToken) {
+      await pool.execute('DELETE FROM app_session WHERE TOKEN_HASH = ?', [resetTokenHash(legacyToken)]);
+    }
+    sendJson(response, 200, { ok: true }, {
+      'Set-Cookie': [expiredSessionCookie(sessionCookieName), expiredSessionCookie(legacySessionCookieName)],
+    });
     return true;
   }
 
