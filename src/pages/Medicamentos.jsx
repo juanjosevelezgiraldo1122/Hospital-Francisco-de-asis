@@ -41,7 +41,6 @@ export default function Medicamentos() {
   const selectedPrescriptions = prescriptionItems.filter((prescription) =>
     selected.includes(prescriptionKey(prescription)) && stockFor(prescription.medicine) > 0,
   );
-  const availableCount = prescriptionItems.filter((prescription) => stockFor(prescription.medicine) > 0).length;
   const visiblePrescriptions = prescriptionItems.filter((prescription) =>
     `${prescription.medicine} ${prescription.dose || ''} ${prescription.doctorName || ''}`
       .toLocaleLowerCase()
@@ -104,32 +103,14 @@ export default function Medicamentos() {
         </span>
       </header>
 
-      <section className="medicine-overview" aria-label="Resumen de tratamientos">
-        <div className="medicine-overview-item">
-          <span>Tratamientos</span>
-          <strong>{prescriptionItems.length}</strong>
-          <small>prescripciones registradas</small>
-        </div>
-        <div className="medicine-overview-item">
-          <span>Con disponibilidad</span>
-          <strong>{availableCount}</strong>
-          <small>con inventario para solicitar</small>
-        </div>
-        <div className="medicine-overview-item medicine-overview-accent">
-          <span>{isPatient ? 'En tu solicitud' : 'Tipo de vista'}</span>
-          <strong>{isPatient ? selectedPrescriptions.length : 'Clínica'}</strong>
-          <small>{isPatient ? 'medicamentos seleccionados' : 'seguimiento de tratamientos'}</small>
-        </div>
-      </section>
-
       <div className="medicine-workspace">
         <section className="medicine-prescriptions" aria-labelledby="prescriptions-title">
           <div className="medicine-section-heading">
             <div>
-              <span className="medicine-section-label">Tratamientos</span>
-              <h2 id="prescriptions-title">Tus prescripciones</h2>
+              <span className="medicine-section-label">Plan de cuidado</span>
+              <h2 id="prescriptions-title">Tratamientos prescritos</h2>
+              <p className="medicine-section-description">Indicaciones y disponibilidad de tus medicamentos.</p>
             </div>
-            <span className="medicine-count">{prescriptionItems.length}</span>
           </div>
 
           <label className="medicine-search">
@@ -164,7 +145,7 @@ export default function Medicamentos() {
                         <span className="medicine-prescription-topline">
                           <strong>{prescription.medicine}</strong>
                           <span className={`medicine-stock${stock ? '' : ' is-empty'}`}>
-                            <span />{stock ? `${stock} disponibles` : 'Agotado'}
+                            <span />{stock ? 'Disponible' : 'Sin disponibilidad'}
                           </span>
                         </span>
                         <span className="medicine-diagnosis">
@@ -258,15 +239,13 @@ export default function Medicamentos() {
               </label>
 
               <div className="medicine-order-summary" aria-live="polite">
-                <div><span>Medicamentos</span><strong>{selectedPrescriptions.length}</strong></div>
+                <strong className="medicine-order-summary-title">{selectedPrescriptions.length ? 'Incluidos en la solicitud' : 'Tu solicitud'}</strong>
                 {selectedPrescriptions.length ? (
                   <ul>
-                    {selectedPrescriptions.map((item) => (
-                      <li key={prescriptionKey(item)}><Check size={14} /> {item.medicine}</li>
-                    ))}
+                    {selectedPrescriptions.map((item) => <li key={prescriptionKey(item)}><Check size={14} /> {item.medicine}</li>)}
                   </ul>
                 ) : (
-                  <p>Selecciona los tratamientos que deseas recibir.</p>
+                  <p>Selecciona los tratamientos que deseas recibir. Aquí verás un resumen antes de continuar.</p>
                 )}
               </div>
 
