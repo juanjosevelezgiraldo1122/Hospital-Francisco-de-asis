@@ -369,51 +369,29 @@ export default function Login() {
   const updateSocialAccount = (field, value) => setSocialValue(field, value);
 
   return (
-    <main className="login-page">
+    <main className={`login-page login-page-centered${['patient', 'socialSetup'].includes(mode) ? ' is-long-form' : ''}`}>
+      <div className="login-brand-header">
+        <img className="login-brand-logo" src="/hospital-francisco-de-asis-logo.png" alt="Hospital Francisco de Asís" />
+      </div>
       <section className="login-shell">
-        <aside className="login-welcome">
-          <img className="login-brand-logo" src="/hospital-francisco-de-asis-logo.png" alt="Hospital Francisco de Asís" />
-          <span className="login-kicker">Salud · Humanidad · Servicio</span>
-          <h1>Tu salud, en buenas manos.</h1>
-          <p>Un espacio sencillo para gestionar tu atención, tus citas y el seguimiento de tus tratamientos.</p>
-          <div className="login-trust"><ShieldCheck size={20} /><span>Atención conectada con el equipo del hospital</span></div>
-        </aside>
-
         <section className="login-panel" aria-labelledby="login-title">
           <div className="login-panel-heading">
-            <span className="eyebrow">Portal de servicios</span>
-            <h2 id="login-title">{mode === 'socialSetup' ? 'Información adicional' : mode === 'forgot' ? 'Recupera tu acceso' : mode === 'reset' ? 'Crea una nueva contraseña' : mode === 'login' ? 'Bienvenido' : 'Crea tu cuenta'}</h2>
-            <p>{mode === 'socialSetup'
-              ? 'Tu identidad fue verificada. Crea las credenciales para tus próximos ingresos.'
-              : mode === 'forgot'
-                ? 'Te enviaremos un enlace seguro al correo asociado a tu cuenta.'
-                : mode === 'reset'
-                  ? 'Elige una contraseña segura para volver a ingresar.'
-              : mode === 'login'
-                ? 'Ingresa tus datos para continuar con tu atención.'
-                : 'Regístrate para reservar citas y consultar tus servicios.'}</p>
+            <h1 id="login-title">{mode === 'socialSetup' ? 'Información adicional' : mode === 'forgot' ? 'Recuperar contraseña' : mode === 'reset' ? 'Nueva contraseña' : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}</h1>
           </div>
-
-          {['login', 'patient'].includes(mode) ? (
-            <div className="login-mode-switch" role="tablist" aria-label="Acceso al portal">
-              <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'active' : ''} onClick={() => setModeValue('login')}>Iniciar sesión</button>
-              <button type="button" role="tab" aria-selected={mode === 'patient'} className={mode === 'patient' ? 'active' : ''} onClick={() => setModeValue('patient')}>Registrarme</button>
-            </div>
-          ) : null}
 
           {message ? <p className={`form-message ${messageSuccess ? 'success' : 'error'}`} role={messageSuccess ? 'status' : 'alert'}>{message}</p> : null}
 
           {mode === 'login' ? (
             <>
               <div className="login-social-actions" aria-label="Iniciar sesión con otro proveedor">
-                <button type="button" className="login-provider-button" onClick={() => startProvider('google')} disabled={busy}>
-                  <img className="provider-google-mark" src="/gmail-mark.png" alt="" /><span>Continuar con Google</span>
+                <button type="button" className="login-provider-button" aria-label="Continuar con Google" onClick={() => startProvider('google')} disabled={busy}>
+                  <img className="provider-google-mark" src="/gmail-mark.png" alt="" /><span>Google</span>
                 </button>
-                <button type="button" className="login-provider-button" onClick={() => startProvider('microsoft')} disabled={busy}>
-                  <span className="provider-microsoft-mark" aria-hidden="true"><i /><i /><i /><i /></span><span>Continuar con Microsoft</span>
+                <button type="button" className="login-provider-button" aria-label="Continuar con Microsoft" onClick={() => startProvider('microsoft')} disabled={busy}>
+                  <span className="provider-microsoft-mark" aria-hidden="true"><i /><i /><i /><i /></span><span>Microsoft</span>
                 </button>
               </div>
-              <div className="login-divider"><span>o ingresa con tus credenciales</span></div>
+              <div className="login-divider"><span>O con tu usuario</span></div>
               <form className="login-form" onSubmit={submitLogin}>
                 <label>Usuario, documento o correo<input autoComplete="username" value={access.identifier} onChange={(event) => setAccess((current) => ({ ...current, identifier: event.target.value }))} required /></label>
                 <label>Contraseña<input type="password" autoComplete="current-password" value={access.password} onChange={(event) => setAccess((current) => ({ ...current, password: event.target.value }))} required /></label>
@@ -421,7 +399,6 @@ export default function Login() {
                 <button className="btn btn-primary full login-submit" type="submit" disabled={busy}>
                   <LockKeyhole size={18} /> {busy ? 'Verificando…' : 'Ingresar'} <ArrowRight size={17} />
                 </button>
-                <p className="login-assurance"><ShieldCheck size={16} /> Tu contraseña se valida de forma segura en el servidor.</p>
               </form>
             </>
           ) : mode === 'forgot' ? (
@@ -478,7 +455,6 @@ export default function Login() {
                 <label>Confirmar contraseña<input type="password" autoComplete="new-password" minLength={10} maxLength={128} value={socialAccount.confirmPassword} onChange={(event) => updateSocialAccount('confirmPassword', event.target.value)} required /></label>
               </div>
               <button className="btn btn-primary full login-submit" type="submit" disabled={busy}><UserPlus size={18} /> {busy ? 'Creando cuenta…' : 'Crear acceso seguro'} <ArrowRight size={17} /></button>
-              <p className="login-assurance"><ShieldCheck size={16} /> Tu clave se guarda protegida y no se comparte con {socialProfile?.provider === 'google' ? 'Google' : 'Microsoft'}.</p>
             </form>
           ) : (
             <form className="login-form login-register-form" onSubmit={submitPatient}>
@@ -504,6 +480,14 @@ export default function Login() {
             </form>
           )}
         </section>
+        {['login', 'patient'].includes(mode) ? (
+          <p className="login-account-switch">
+            {mode === 'login' ? '¿Aún no tienes una cuenta?' : '¿Ya tienes una cuenta?'}
+            <button type="button" onClick={() => setModeValue(mode === 'login' ? 'patient' : 'login')}>
+              {mode === 'login' ? 'Crear una cuenta' : 'Iniciar sesión'}
+            </button>
+          </p>
+        ) : null}
       </section>
     </main>
   );

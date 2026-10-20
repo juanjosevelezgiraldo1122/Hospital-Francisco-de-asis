@@ -7393,3 +7393,110 @@ dd {
   .home-public-service { grid-template-columns: 88px minmax(0, 1fr); }
   .home-public-service > img { min-height: 196px; }
 }
+
+/* Centered sign-in experience */
+.login-page-centered {
+  display: flex;
+  min-height: 100svh;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 20px 36px;
+  background: var(--white);
+}
+
+.login-page-centered.is-long-form { justify-content: flex-start; }
+.login-page-centered.is-long-form .login-brand-header,
+.login-page-centered.is-long-form .login-shell { flex-shrink: 0; margin-inline: auto; }
+
+.login-brand-header {
+  display: grid;
+  width: min(480px, 100%);
+  min-height: 112px;
+  place-items: center;
+}
+
+.login-brand-header .login-brand-logo {
+  width: 160px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.login-page-centered .login-shell {
+  display: block;
+  width: min(480px, 100%);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-page-centered .login-panel {
+  display: block;
+  border: 1px solid #d7e0e8;
+  border-radius: 8px;
+  padding: 28px 30px 26px;
+  background: var(--white);
+  box-shadow: 0 12px 34px rgb(11 49 88 / 6%);
+}
+
+.login-page-centered .login-panel-heading {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.login-page-centered .login-panel-heading h1 {
+  margin: 0;
+  color: var(--gray-900);
+  font-size: 1.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.login-account-switch {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  color: var(--gray-900);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.login-account-switch button {
+  padding: 2px 0;
+  color: var(--blue-700);
+  background: transparent;
+  font-size: inherit;
+  font-weight: 800;
+}
+
+.login-account-switch button:hover { text-decoration: underline; }
+.login-page-centered .login-social-actions { gap: 9px; }
+.login-page-centered .login-provider-button { min-height: 44px; font-size: 0.84rem; }
+.login-page-centered .login-divider { margin: 16px 0; font-size: 0.75rem; }
+.login-page-centered .login-form { gap: 14px; }
+.login-page-centered .login-form label { gap: 5px; font-size: 0.82rem; }
+.login-page-centered .login-form input,
+.login-page-centered .login-form select { min-height: 46px; padding: 10px 12px; }
+.login-page-centered .login-submit { min-height: 48px; margin-top: 0; }
+.login-page-centered .login-text-link { font-size: 0.82rem; }
+.login-page-centered .form-message { margin: 0 0 14px; }
+
+@media (max-width: 620px) {
+  .login-page-centered { display: flex; min-height: 100svh; padding: 18px 16px 26px; }
+  .login-brand-header { min-height: 92px; }
+  .login-brand-header .login-brand-logo { width: 134px; height: 94px; }
+  .login-page-centered .login-shell { margin: 0; }
+  .login-page-centered .login-panel { padding: 24px 20px 22px; }
+}
+
+@media (max-width: 380px) {
+  .login-page-centered .login-panel { padding: 22px 16px 20px; }
+  .login-page-centered .login-provider-button { gap: 7px; padding-inline: 8px; font-size: 0.76rem; }
+  .login-account-switch { align-items: center; flex-direction: column; gap: 1px; }
+}
