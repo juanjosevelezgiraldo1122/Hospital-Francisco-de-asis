@@ -40,10 +40,9 @@ const roleLabel = {
   secretary: 'Secretaria',
 };
 
-export const Navbar = () => {
+export const Navbar = ({ isSidebarPinned, setIsSidebarPinned }) => {
   const { currentUser, logout } = useAppData();
   const navigate = useNavigate();
-  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
   if (!currentUser) return <PublicNavbar />;
 
   const visibleItems = navItems.filter((item) => item.roles.includes(currentUser.role));
@@ -106,9 +105,9 @@ export const Navbar = () => {
               className="sidebar-logout"
               aria-label="Cerrar sesion"
               title="Cerrar sesion"
-              onClick={() => {
-                logout();
-                navigate('/login');
+              onClick={async () => {
+                await logout();
+                navigate('/login', { replace: true });
               }}
             >
               <LogOut size={19} />
@@ -176,10 +175,19 @@ export const Footer = () => (
 
 export const Layout = () => {
   const { currentUser } = useAppData();
+  const [isSidebarPinned, setIsSidebarPinned] = useState(() => window.matchMedia('(min-width: 901px)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 901px)');
+    const syncSidebar = (event) => setIsSidebarPinned(event.matches);
+    media.addEventListener('change', syncSidebar);
+    return () => media.removeEventListener('change', syncSidebar);
+  }, []);
+
   return (
-    <div className={`app-shell${currentUser ? '' : ' public-shell'}`}>
+    <div className={`app-shell${currentUser ? '' : ' public-shell'}${currentUser && isSidebarPinned ? ' is-sidebar-expanded' : ''}`}>
       <RouteHashScroller />
-      <Navbar />
+      <Navbar isSidebarPinned={isSidebarPinned} setIsSidebarPinned={setIsSidebarPinned} />
       <main className="main-content">
         <Outlet />
       </main>

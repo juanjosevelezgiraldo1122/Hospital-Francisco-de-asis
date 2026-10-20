@@ -24,7 +24,11 @@ export function AppDataProvider({ children }) {
   const acceptAuthenticatedUser = useCallback(async (profile) => {
     setCurrentUser(profile);
     setData(emptyData);
-    await refreshData();
+    try {
+      await refreshData();
+    } catch {
+      setData(emptyData);
+    }
   }, [refreshData]);
 
   useEffect(() => {
@@ -39,7 +43,7 @@ export function AppDataProvider({ children }) {
         const state = await stateResponse.json();
         if (!active) return;
         if (stateResponse.ok) setData({ ...emptyData, ...state.data });
-        else setCurrentUser(null);
+        else setData(emptyData);
       } catch {
         if (active) setCurrentUser(null);
       } finally {
@@ -89,9 +93,9 @@ export function AppDataProvider({ children }) {
   }, [acceptAuthenticatedUser]);
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     setCurrentUser(null);
     setData(emptyData);
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
   }, []);
 
   const registerPatient = async (form, autoLogin = true) => {

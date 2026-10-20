@@ -4194,8 +4194,8 @@ dd {
   min-height: 100vh;
   overflow: hidden;
   border: 0;
-  border-right: 1px solid var(--border);
-  background: color-mix(in srgb, var(--white) 94%, transparent);
+  border-right: 1px solid #d8e7f4;
+  background: #f2f7fc;
   box-shadow: 8px 0 24px color-mix(in srgb, var(--blue-900) 8%, transparent);
   transition: width 220ms ease, box-shadow 220ms ease;
 }
@@ -4242,9 +4242,11 @@ dd {
   flex: 0 0 auto;
   place-items: center;
   border-radius: var(--radius);
-  color: var(--blue-900);
-  background: var(--sky-100);
+  color: #fff;
+  background: var(--blue-800);
 }
+.sidebar-toggle:hover { background: var(--blue-900); }
+.sidebar-nav .brand-text { color: var(--blue-900); }
 
 .sidebar-nav .navbar-center {
   display: flex;
@@ -4270,11 +4272,17 @@ dd {
   justify-content: flex-start;
   padding: 10px 11px;
   white-space: nowrap;
+  color: #34536f;
 }
 
 .sidebar-nav .nav-link svg {
   flex: 0 0 auto;
+  color: #36658d;
 }
+
+.sidebar-nav .nav-link.active { border-color: var(--blue-800); color: #fff; background: var(--blue-800); box-shadow: 0 5px 14px rgb(11 49 88 / 16%); }
+.sidebar-nav .nav-link.active svg { color: #fff; }
+.sidebar-nav .nav-link:hover:not(.active) { border-color: #d3e4f2; color: var(--blue-900); background: #e5f0f9; }
 
 .sidebar-nav .nav-link span,
 .sidebar-nav .brand-text,
@@ -4337,8 +4345,8 @@ dd {
   gap: 12px;
   border-radius: var(--radius);
   padding: 10px 11px;
-  color: var(--blue-900);
-  background: var(--sky-100);
+  color: #244b6e;
+  background: #e3eef8;
   text-align: left;
   white-space: nowrap;
 }
@@ -4360,8 +4368,15 @@ dd {
 }
 
 .sidebar-logout:hover {
-  background: var(--sky-200);
+  color: var(--blue-900);
+  background: #d5e6f4;
 }
+
+.app-shell.is-sidebar-expanded .main-content { padding-left: 272px; }
+.app-shell.is-sidebar-expanded .footer { margin-left: 272px; }
+.auth-session-check { display: flex; min-height: 100svh; align-items: center; justify-content: center; gap: 12px; padding: 24px; color: var(--blue-800); background: #f3f8fc; font-size: 0.95rem; font-weight: 750; }
+.auth-session-check svg { animation: auth-session-spin 1s linear infinite; }
+@keyframes auth-session-spin { to { transform: rotate(360deg); } }
 
 .profile-personal {
   display: grid;
@@ -4568,6 +4583,9 @@ dd {
     padding-left: 68px;
   }
 
+  .app-shell.is-sidebar-expanded .main-content { padding-left: 68px; }
+  .app-shell.is-sidebar-expanded .footer { margin-left: 68px; }
+
   .footer {
     margin-left: 68px;
   }
@@ -4587,6 +4605,9 @@ dd {
   .main-content {
     padding-left: 60px;
   }
+
+  .app-shell.is-sidebar-expanded .main-content { padding-left: 60px; }
+  .app-shell.is-sidebar-expanded .footer { margin-left: 60px; }
 
   .footer {
     margin-left: 60px;

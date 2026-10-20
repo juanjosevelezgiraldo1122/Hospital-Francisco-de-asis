@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, LockKeyhole, Mail, MailCheck, ShieldCheck, UserPlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, LoaderCircle, LockKeyhole, Mail, MailCheck, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAppData } from '../store';
 
 const emptyPatient = {
@@ -48,7 +48,7 @@ const consumeLoginDestination = (from, role) => {
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, acceptAuthenticatedUser } = useAppData();
+  const { currentUser, loading, acceptAuthenticatedUser } = useAppData();
   const [mode, setMode] = useState(() => new URLSearchParams(window.location.search).has('reset_token') ? 'reset' : 'login');
   const [access, setAccess] = useState({ identifier: '', password: '' });
   const [patient, setPatient] = useState(emptyPatient);
@@ -178,7 +178,7 @@ export default function Login() {
         });
         const completed = await readResponse(completion);
         if (!completion.ok) throw new Error(completed.error || 'No se pudo iniciar sesión.');
-        acceptAuthenticatedUser(completed.user);
+        await acceptAuthenticatedUser(completed.user);
         window.history.replaceState({}, '', '/login');
         navigate(consumeLoginDestination(location.state?.from, completed.user.role), { replace: true });
       })
@@ -189,6 +189,7 @@ export default function Login() {
       .finally(() => setBusy(false));
   }, [acceptAuthenticatedUser, location.state, navigate]);
 
+  if (loading) return <main className="auth-session-check" role="status" aria-live="polite"><LoaderCircle size={26} /><span>Verificando tu sesión…</span></main>;
   if (currentUser) return <Navigate to={currentUser.role === 'secretary' ? '/secretaria' : '/'} replace />;
 
   const submitLogin = async (event) => {
@@ -203,7 +204,7 @@ export default function Login() {
       });
       const result = await readResponse(response);
       if (response.ok) {
-        acceptAuthenticatedUser(result.user);
+        await acceptAuthenticatedUser(result.user);
         navigate(consumeLoginDestination(location.state?.from, result.user.role), { replace: true });
         return;
       }
@@ -326,7 +327,7 @@ export default function Login() {
       });
       const result = await readResponse(response);
       if (!response.ok) throw new Error(result.error || 'No se pudo completar el registro.');
-      acceptAuthenticatedUser(result.user);
+      await acceptAuthenticatedUser(result.user);
       navigate(consumeLoginDestination(location.state?.from, result.user.role), { replace: true });
     } catch (error) {
       setMessage(error.message || 'No se pudo completar el registro.');
