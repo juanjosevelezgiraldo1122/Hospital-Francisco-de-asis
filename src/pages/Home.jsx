@@ -18,7 +18,6 @@ import {
   Stethoscope,
   UserRound,
   UserPlus,
-  UserCog,
   UserCheck,
   UsersRound,
 } from 'lucide-react';
@@ -118,6 +117,137 @@ const informationSlides = [
 const heroVideoUrl = 'https://d8j0ntlcm91z4.cloudfront.net/user_3K5kSdIFzHH8pXqPmBa9yAIvE4k/hf_20261001_115030_d0e40a7c-ce4a-4a53-b9f8-9245bca473d9.mp4';
 
 export default function Home() {
+  const { currentUser } = useAppData();
+  return currentUser ? <AuthenticatedHome /> : <PublicHome />;
+}
+
+function PublicHome() {
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const slide = informationSlides[activeSlide];
+
+  useEffect(() => {
+    if (carouselPaused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const interval = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % informationSlides.length);
+    }, 6500);
+    return () => window.clearInterval(interval);
+  }, [carouselPaused]);
+
+  const showSlide = (direction) => {
+    setActiveSlide((current) => (current + direction + informationSlides.length) % informationSlides.length);
+  };
+
+  return (
+    <section className="home-portal home-public">
+      <header className="hospital-hero home-public-hero">
+        <video className="hero-video" autoPlay muted loop playsInline preload="metadata" poster="/home-carousel/infraestructura.png" aria-hidden="true">
+          <source src={heroVideoUrl} type="video/mp4" />
+        </video>
+        <div className="hero-video-overlay" aria-hidden="true" />
+        <div className="home-public-hero-content">
+          <span className="home-public-eyebrow"><HeartHandshake size={17} /> Salud · Humanidad · Servicio</span>
+          <h1>Una atención cercana, también desde aquí.</h1>
+          <p>Conoce los servicios del Hospital Francisco de Asís y gestiona tu atención desde un portal sencillo y seguro.</p>
+          <div className="home-public-actions">
+            <Link to="/citas" className="home-public-primary"><CalendarDays size={18} /> Solicitar una cita</Link>
+            <Link to="/login" className="home-public-secondary">Entrar al portal <ArrowUpRight size={17} /></Link>
+          </div>
+          <span className="home-public-secure"><ShieldCheck size={15} /> Tus gestiones personales requieren iniciar sesión.</span>
+        </div>
+        <div className="home-public-scroll" aria-hidden="true"><span /> Descubre el portal</div>
+      </header>
+
+      <div className="page-content home-public-content">
+        <section className="home-public-services" id="servicios" aria-labelledby="public-services-title">
+          <header className="home-public-section-heading">
+            <div>
+              <span className="eyebrow">Servicios digitales</span>
+              <h2 id="public-services-title">Tu atención, más cerca</h2>
+            </div>
+            <p>Explora los servicios disponibles. Para iniciar una gestión, ingresa a tu cuenta o crea una.</p>
+          </header>
+          <div className="home-public-service-grid">
+            <Link to="/citas" className="home-public-service">
+              <img src="/home-carousel/atencion-integral.png" alt="Equipo asistencial acompañando a un paciente" />
+              <span className="home-public-service-content">
+                <span className="home-public-service-icon"><CalendarDays size={20} /></span>
+                <strong>Citas médicas</strong>
+                <span>Consulta disponibilidad y solicita una cita con el equipo asistencial.</span>
+                <span className="home-public-service-action">Acceder al servicio <ArrowUpRight size={16} /></span>
+              </span>
+            </Link>
+            <Link to="/medicamentos" className="home-public-service">
+              <img src="/home-carousel/farmacia.png" alt="Profesional de farmacia organizando medicamentos" />
+              <span className="home-public-service-content">
+                <span className="home-public-service-icon"><Pill size={20} /></span>
+                <strong>Medicamentos</strong>
+                <span>Revisa las prescripciones y gestiona solicitudes de domicilio.</span>
+                <span className="home-public-service-action">Acceder al servicio <ArrowUpRight size={16} /></span>
+              </span>
+            </Link>
+            <Link to="/mis-documentos" className="home-public-service">
+              <img src="/home-carousel/investigacion-clinica.png" alt="Profesionales revisando información clínica" />
+              <span className="home-public-service-content">
+                <span className="home-public-service-icon"><FileHeart size={20} /></span>
+                <strong>Mis documentos</strong>
+                <span>Consulta y genera documentos relacionados con tu atención.</span>
+                <span className="home-public-service-action">Acceder al servicio <ArrowUpRight size={16} /></span>
+              </span>
+            </Link>
+          </div>
+        </section>
+
+        <section
+          className="home-information-carousel home-public-carousel"
+          id="atencion"
+          aria-label="Conoce el hospital"
+          aria-roledescription="carrusel"
+          onPointerEnter={() => setCarouselPaused(true)}
+          onPointerLeave={() => setCarouselPaused(false)}
+          onFocusCapture={() => setCarouselPaused(true)}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setCarouselPaused(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowRight') { event.preventDefault(); showSlide(1); }
+            if (event.key === 'ArrowLeft') { event.preventDefault(); showSlide(-1); }
+          }}
+        >
+          <img className="home-information-image" key={slide.image} src={slide.image} alt={slide.imageAlt} />
+          <div className="home-information-overlay" aria-hidden="true" />
+          <div className="home-information-copy" aria-live={carouselPaused ? 'polite' : 'off'}>
+            <span className="eyebrow">{slide.eyebrow}</span>
+            <h2>{slide.title}</h2>
+            <p>{slide.text}</p>
+          </div>
+          <button type="button" className="home-carousel-arrow previous" aria-label="Información anterior" onClick={() => showSlide(-1)}><ChevronLeft size={23} /></button>
+          <button type="button" className="home-carousel-arrow next" aria-label="Siguiente información" onClick={() => showSlide(1)}><ChevronRight size={23} /></button>
+          <div className="home-carousel-indicators" role="group" aria-label="Seleccionar información">
+            {informationSlides.map((item, index) => (
+              <button key={item.eyebrow} type="button" className={index === activeSlide ? 'active' : ''} aria-label={`Mostrar información ${index + 1}: ${item.eyebrow}`} onClick={() => setActiveSlide(index)} />
+            ))}
+          </div>
+        </section>
+
+        <section className="home-public-access" id="farmacia" aria-labelledby="public-access-title">
+          <div className="home-public-access-heading">
+            <span className="eyebrow">Un portal pensado para acompañarte</span>
+            <h2 id="public-access-title">Empieza por lo que necesitas</h2>
+          </div>
+          <div className="home-public-steps">
+            <article><span>01</span><div><strong>Explora</strong><p>Conoce los servicios y elige la gestión que necesitas.</p></div></article>
+            <article><span>02</span><div><strong>Identifícate</strong><p>Inicia sesión para proteger tu información personal.</p></div></article>
+            <article><span>03</span><div><strong>Continúa</strong><p>Completa tu solicitud y consulta su estado desde tu cuenta.</p></div></article>
+          </div>
+          <Link to="/login" className="home-public-access-link">Ingresar o crear una cuenta <ArrowUpRight size={17} /></Link>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function AuthenticatedHome() {
   const { currentUser } = useAppData();
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);

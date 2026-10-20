@@ -22,43 +22,43 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<ProtectedRoute />}>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Home />} />
-              <Route path="dashboard" element={<ProtectedRoute allowedRoles={['admin', 'patient']} />}>
-                <Route index element={<Dashboard />} />
-              </Route>
-              <Route path="citas" element={<ProtectedRoute allowedRoles={['patient']} />}>
-                <Route index element={<Citas />} />
-              </Route>
-              <Route path="mis-documentos" element={<ProtectedRoute allowedRoles={['patient']} />}>
-                <Route index element={<MisDocumentos />} />
-              </Route>
-              <Route path="medicamentos" element={<ProtectedRoute allowedRoles={['patient', 'doctor']} />}>
-                <Route index element={<Medicamentos />} />
-              </Route>
-              <Route path="panel-medicamentos" element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route index element={<PanelMedicamentos />} />
-              </Route>
-              <Route path="pago/:deliveryId" element={<ProtectedRoute allowedRoles={['patient']} />}>
-                <Route index element={<PasarelaPago />} />
-              </Route>
-              <Route path="doctores" element={<ProtectedRoute allowedRoles={['doctor']} />}>
-                <Route index element={<Doctores />} />
-              </Route>
-              <Route path="pacientes" element={<ProtectedRoute allowedRoles={['doctor']} />}>
-                <Route index element={<Navigate to="/doctores" replace />} />
-              </Route>
-              <Route path="historia-clinica" element={<ProtectedRoute allowedRoles={['doctor']} />}>
-                <Route index element={<HistoriaClinica />} />
-              </Route>
-              <Route path="secretaria" element={<ProtectedRoute allowedRoles={['admin', 'secretary']} />}>
-                <Route index element={<Secretaria />} />
-              </Route>
-              <Route path="administracion" element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route index element={<Administracion />} />
-              </Route>
-              <Route path="perfil" element={<Perfil />} />
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="dashboard" element={<ProtectedRoute allowedRoles={['admin', 'patient']} />}>
+              <Route index element={<Dashboard />} />
+            </Route>
+            <Route path="citas" element={<ProtectedRoute allowedRoles={['patient']} />}>
+              <Route index element={<Citas />} />
+            </Route>
+            <Route path="mis-documentos" element={<ProtectedRoute allowedRoles={['patient']} />}>
+              <Route index element={<MisDocumentos />} />
+            </Route>
+            <Route path="medicamentos" element={<ProtectedRoute allowedRoles={['patient', 'doctor']} />}>
+              <Route index element={<Medicamentos />} />
+            </Route>
+            <Route path="panel-medicamentos" element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route index element={<PanelMedicamentos />} />
+            </Route>
+            <Route path="pago/:deliveryId" element={<ProtectedRoute allowedRoles={['patient']} />}>
+              <Route index element={<PasarelaPago />} />
+            </Route>
+            <Route path="doctores" element={<ProtectedRoute allowedRoles={['doctor']} />}>
+              <Route index element={<Doctores />} />
+            </Route>
+            <Route path="pacientes" element={<ProtectedRoute allowedRoles={['doctor']} />}>
+              <Route index element={<Navigate to="/doctores" replace />} />
+            </Route>
+            <Route path="historia-clinica" element={<ProtectedRoute allowedRoles={['doctor']} />}>
+              <Route index element={<HistoriaClinica />} />
+            </Route>
+            <Route path="secretaria" element={<ProtectedRoute allowedRoles={['admin', 'secretary']} />}>
+              <Route index element={<Secretaria />} />
+            </Route>
+            <Route path="administracion" element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route index element={<Administracion />} />
+            </Route>
+            <Route path="perfil" element={<ProtectedRoute />}>
+              <Route index element={<Perfil />} />
             </Route>
           </Route>
         </Routes>

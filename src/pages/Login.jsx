@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, LockKeyhole, Mail, MailCheck, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAppData } from '../store';
 
@@ -26,8 +26,28 @@ async function readResponse(response) {
   }
 }
 
+const pathFromLocation = (from) => {
+  if (!from) return '';
+  const path = typeof from === 'string'
+    ? from
+    : `${from.pathname || ''}${from.search || ''}${from.hash || ''}`;
+  return path.startsWith('/') && !path.startsWith('//') && !path.startsWith('/login') ? path : '';
+};
+
+const consumeLoginDestination = (from, role) => {
+  let path = pathFromLocation(from);
+  try {
+    if (!path) path = pathFromLocation(sessionStorage.getItem('hospital-auth-return-to'));
+    sessionStorage.removeItem('hospital-auth-return-to');
+  } catch {
+    // The default destination still works when browser storage is unavailable.
+  }
+  return path || (role === 'secretary' ? '/secretaria' : '/');
+};
+
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, acceptAuthenticatedUser } = useAppData();
   const [mode, setMode] = useState(() => new URLSearchParams(window.location.search).has('reset_token') ? 'reset' : 'login');
   const [access, setAccess] = useState({ identifier: '', password: '' });
@@ -160,14 +180,14 @@ export default function Login() {
         if (!completion.ok) throw new Error(completed.error || 'No se pudo iniciar sesión.');
         acceptAuthenticatedUser(completed.user);
         window.history.replaceState({}, '', '/login');
-        navigate(completed.user.role === 'secretary' ? '/secretaria' : '/', { replace: true });
+        navigate(consumeLoginDestination(location.state?.from, completed.user.role), { replace: true });
       })
       .catch((error) => {
         setMessage(error.message || 'No se pudo validar la identidad.');
         window.history.replaceState({}, '', '/login');
       })
       .finally(() => setBusy(false));
-  }, [acceptAuthenticatedUser, navigate]);
+  }, [acceptAuthenticatedUser, location.state, navigate]);
 
   if (currentUser) return <Navigate to={currentUser.role === 'secretary' ? '/secretaria' : '/'} replace />;
 
@@ -184,7 +204,7 @@ export default function Login() {
       const result = await readResponse(response);
       if (response.ok) {
         acceptAuthenticatedUser(result.user);
-        navigate(result.user.role === 'secretary' ? '/secretaria' : '/', { replace: true });
+        navigate(consumeLoginDestination(location.state?.from, result.user.role), { replace: true });
         return;
       }
       setMessage(result.error || 'Credenciales incorrectas.');
@@ -271,7 +291,7 @@ export default function Login() {
       const result = await readResponse(response);
       if (!response.ok) throw new Error(result.error || 'No se pudo crear la cuenta.');
       await acceptAuthenticatedUser(result.user);
-      navigate('/');
+      navigate(consumeLoginDestination(location.state?.from, result.user.role), { replace: true });
     } catch (error) {
       setMessage(error.message || 'No se pudo crear la cuenta en MySQL.');
     } finally {
@@ -307,7 +327,7 @@ export default function Login() {
       const result = await readResponse(response);
       if (!response.ok) throw new Error(result.error || 'No se pudo completar el registro.');
       acceptAuthenticatedUser(result.user);
-      navigate('/', { replace: true });
+      navigate(consumeLoginDestination(location.state?.from, result.user.role), { replace: true });
     } catch (error) {
       setMessage(error.message || 'No se pudo completar el registro.');
     } finally {
@@ -330,6 +350,14 @@ export default function Login() {
 
   const startProvider = async (provider) => {
     setMessage('');
+    const returnTo = pathFromLocation(location.state?.from);
+    if (returnTo) {
+      try {
+        sessionStorage.setItem('hospital-auth-return-to', returnTo);
+      } catch {
+        // OAuth can continue even if the browser blocks session storage.
+      }
+    }
     const available = providers[provider];
     if (available) {
       window.location.assign(`/api/auth/${provider}/start`);
@@ -379,7 +407,7 @@ export default function Login() {
             <>
               <div className="login-social-actions" aria-label="Iniciar sesión con otro proveedor">
                 <button type="button" className="login-provider-button" onClick={() => startProvider('google')} disabled={busy}>
-                  <span className="provider-google-mark" aria-hidden="true">G</span><span>Continuar con Google</span>
+                  <img className="provider-google-mark" src="/gmail-mark.png" alt="" /><span>Continuar con Google</span>
                 </button>
                 <button type="button" className="login-provider-button" onClick={() => startProvider('microsoft')} disabled={busy}>
                   <span className="provider-microsoft-mark" aria-hidden="true"><i /><i /><i /><i /></span><span>Continuar con Microsoft</span>

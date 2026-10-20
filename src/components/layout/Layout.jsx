@@ -7,6 +7,7 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
+  LogIn,
   Menu,
   Pill,
   Files,
@@ -43,6 +44,8 @@ export const Navbar = () => {
   const { currentUser, logout } = useAppData();
   const navigate = useNavigate();
   const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  if (!currentUser) return <PublicNavbar />;
+
   const visibleItems = navItems.filter((item) => item.roles.includes(currentUser.role));
 
   return (
@@ -127,6 +130,26 @@ export const Navbar = () => {
   );
 };
 
+const PublicNavbar = () => (
+  <nav className="public-site-nav" aria-label="Navegación principal">
+    <div className="public-site-nav-inner">
+      <Link to="/" className="public-site-brand" aria-label="Hospital Francisco de Asís, inicio">
+        <img src="/hospital-francisco-de-asis-logo.png" alt="" />
+        <span>Hospital Francisco de Asís</span>
+      </Link>
+      <div className="public-site-links">
+        <a href="#servicios">Servicios</a>
+        <a href="#atencion">Atención</a>
+        <a href="#farmacia">Farmacia</a>
+      </div>
+      <Link to="/login" className="public-site-signin">
+        <LogIn size={17} />
+        <span>Iniciar sesión</span>
+      </Link>
+    </div>
+  </nav>
+);
+
 const RouteHashScroller = () => {
   const { hash, pathname } = useLocation();
 
@@ -145,20 +168,23 @@ const RouteHashScroller = () => {
 export const Footer = () => (
   <footer className="footer">
     <div className="footer-content">
-      <span>Hospital Francisco de Asís - datos creados en la pagina y guardados localmente.</span>
-      <span>Salud, humanidad y servicio - agenda, historia clinica y tratamiento.</span>
+      <span>Hospital Francisco de Asís · Salud, humanidad y servicio.</span>
+      <span>El acceso a la información personal requiere iniciar sesión.</span>
     </div>
   </footer>
 );
 
-export const Layout = () => (
-  <div className="app-shell">
-    <RouteHashScroller />
-    <Navbar />
-    <main className="main-content">
-      <Outlet />
-    </main>
-    <HospitalAssistant />
-    <Footer />
-  </div>
-);
+export const Layout = () => {
+  const { currentUser } = useAppData();
+  return (
+    <div className={`app-shell${currentUser ? '' : ' public-shell'}`}>
+      <RouteHashScroller />
+      <Navbar />
+      <main className="main-content">
+        <Outlet />
+      </main>
+      {currentUser ? <HospitalAssistant /> : null}
+      <Footer />
+    </div>
+  );
+};
