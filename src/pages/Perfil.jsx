@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CalendarDays, Check, KeyRound, LogOut, MapPin, Pencil, ShieldCheck, UserCircle, X } from 'lucide-react';
+import { Check, LogOut, MapPin, Pencil, UserCircle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { emptyAddressParts, formatColombianAddress, normalizeAddressParts } from '../../shared/colombianAddress';
 import { useAppData } from '../store';
@@ -93,9 +93,9 @@ export default function Perfil() {
       <header className="profile-cover">
         <div className="profile-avatar"><UserCircle size={58} /></div>
         <div>
-          <span className="eyebrow">Perfil activo</span>
+          <span className="eyebrow">Mi cuenta</span>
           <h1>{currentUser.name}</h1>
-          <p>{role}</p>
+          <p className="profile-role-badge">{role}</p>
         </div>
         <button type="button" className="btn btn-secondary profile-logout" onClick={handleLogout}>
           <LogOut size={18} /> Cerrar sesión
@@ -113,7 +113,9 @@ export default function Perfil() {
               {personalFields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
             </dl>
           ) : <p>No hay datos personales adicionales registrados.</p>}
+        </article>
 
+        <article className="profile-contact-card">
           <section className="profile-address-section" aria-labelledby="profile-address-title">
             <div className="profile-address-heading">
               <div className="profile-address-title">
@@ -170,28 +172,6 @@ export default function Perfil() {
               </>
             )}
           </section>
-        </article>
-
-        <article className="profile-summary">
-          <ShieldCheck size={30} />
-          <h2>Sesión protegida</h2>
-          <p>La dirección se guarda en tu perfil y solo es editable desde tu cuenta.</p>
-        </article>
-
-        <article className="profile-summary">
-          <CalendarDays size={30} />
-          <h2>Destino por rol</h2>
-          <p>Paciente entra a citas, médico a agenda diaria, secretaria a gestión asistida y administrador a roles.</p>
-        </article>
-
-        <article className="profile-summary wide">
-          <KeyRound size={30} />
-          <h2>Permisos asociados</h2>
-          <div className="permission-chips">
-            {['Consultar agenda y citas asignadas', 'Acceder solo a módulos permitidos por rol', 'Cerrar sesión desde cualquier vista', 'Mantener datos de acceso protegidos'].map((permission) => (
-              <span key={permission}>{permission}</span>
-            ))}
-          </div>
         </article>
       </section>
     </section>
