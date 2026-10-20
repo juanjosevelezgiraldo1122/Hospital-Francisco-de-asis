@@ -132,6 +132,11 @@ export function AppDataProvider({ children }) {
     if (result.ok && currentUser) setCurrentUser((previous) => ({ ...previous, address, addressParts }));
     return result.ok ? { ...result, address } : result;
   };
+  const updateUserProfile = async (changes) => {
+    const result = await mutate('/api/auth/profile', changes, 'PATCH');
+    if (result.ok && result.user) setCurrentUser(result.user);
+    return result;
+  };
 
   const createAppointment = (form) => mutate('/api/appointments', { ...form, patientId: currentUser?.id });
   const createAppointmentForSecretary = (form) => mutate('/api/appointments', form);
@@ -154,7 +159,7 @@ export function AppDataProvider({ children }) {
   return (
     <AppDataContext.Provider value={{
       data, currentUser, loading, isAuthenticated: Boolean(currentUser), login, logout,
-      acceptAuthenticatedUser, refreshData, registerPatient, updateUserAddress, addDoctor,
+      acceptAuthenticatedUser, refreshData, registerPatient, updateUserAddress, updateUserProfile, addDoctor,
       addSecretary, updateUserRole, updateDoctor, createAppointment, createAppointmentForSecretary,
       rescheduleAppointment, registerPatientBySecretary, updateAppointment, startAppointment,
       saveClinicalRecord, createDelivery, payDelivery, updateInventoryStock, addMedication,

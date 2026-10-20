@@ -105,6 +105,7 @@ const activeSession = async (request) => {
 const frontendRedirect = (query) => `${appOrigin}/login?${new URLSearchParams(query)}`;
 const roleName = (value) => ({ paciente: 'patient', medico: 'doctor', secretaria: 'secretary', administrador: 'admin' })[String(value || '').toLowerCase()] || 'patient';
 const displayName = (row) => [row.NOMBRE_1, row.NOMBRE_2, row.APELLIDO_1, row.APELLIDO_2].filter(Boolean).join(' ').trim();
+const dateOnly = (value) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value || '').slice(0, 10);
 const publicUser = (row) => ({
   id: `PAT-DB-${row.ID_USUARIO}`,
   databaseId: Number(row.ID_USUARIO),
@@ -112,12 +113,16 @@ const publicUser = (row) => ({
   username: row.USUARIO_LOGIN,
   document: row.NUMERO_DOCUMENTO,
   typeId: row.TIPO_DOCUMENTO,
+  firstName: row.NOMBRE_1 || '',
+  middleName: row.NOMBRE_2 || '',
+  lastName: row.APELLIDO_1 || '',
+  secondLastName: row.APELLIDO_2 || '',
   name: displayName(row),
   email: row.EMAIL,
   phone: row.TELEFONO || '',
   address: row.DIRECCION || '',
   addressParts: addressPartsFromRow(row),
-  birthDate: row.FECHA_NACIMIENTO || '',
+  birthDate: dateOnly(row.FECHA_NACIMIENTO),
   eps: row.EPS || '',
   status: row.ESTADO,
 });
@@ -352,6 +357,68 @@ export async function handleAuthRequest(request, response, url) {
 
   if (!databaseConfigured) {
     sendJson(response, 503, { error: 'La autenticación de cuentas requiere una conexión MySQL configurada.' });
+    return true;
+  }
+
+  if (path === '/api/auth/profile' && request.method === 'PATCH') {
+    const session = await activeSession(request);
+    if (!session) {
+      sendJson(response, 401, { error: 'La sesión venció. Inicia sesión nuevamente.' });
+      return true;
+    }
+    let connection;
+    try {
+      const body = await readJson(request);
+      const firstName = normalizeText(body.firstName, 60);
+      const middleName = normalizeText(body.middleName, 60);
+      const lastName = normalizeText(body.lastName, 60);
+      const secondLastName = normalizeText(body.secondLastName, 60);
+      const email = normalizeText(body.email, 254).toLowerCase();
+      const phone = normalizeText(body.phone, 30);
+      const birthDate = normalizeText(body.birthDate, 10);
+      const eps = normalizeText(body.eps, 120);
+      const validName = (value) => /^[\p{L}][\p{L}\p{M} .'-]{0,59}$/u.test(value);
+      const validDate = !birthDate || (/^\d{4}-\d{2}-\d{2}$/.test(birthDate)
+        && !Number.isNaN(Date.parse(`${birthDate}T00:00:00Z`))
+        && new Date(`${birthDate}T00:00:00Z`).toISOString().slice(0, 10) === birthDate
+        && birthDate <= new Date().toISOString().slice(0, 10));
+      if (!validName(firstName) || !validName(lastName)
+        || (middleName && !validName(middleName)) || (secondLastName && !validName(secondLastName))
+        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !validDate || (phone && !validPhone(phone))) {
+        sendJson(response, 400, { error: 'Revisa nombres, correo, teléfono y fecha de nacimiento.' });
+        return true;
+      }
+
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      const [[account]] = await connection.execute(
+        `SELECT u.ID_USUARIO, r.NOMBRE AS ROL FROM usuario u
+         JOIN rol r ON r.ID_ROL=u.ID_ROL WHERE u.ID_USUARIO=? AND u.ESTADO='activo' FOR UPDATE`,
+        [session.userId],
+      );
+      if (!account) throw Object.assign(new Error('La cuenta ya no está disponible.'), { statusCode: 404 });
+      await connection.execute(
+        `UPDATE usuario SET NOMBRE_1=?, NOMBRE_2=?, APELLIDO_1=?, APELLIDO_2=?,
+          EMAIL=?, TELEFONO=?, FECHA_NACIMIENTO=? WHERE ID_USUARIO=?`,
+        [firstName, middleName || null, lastName, secondLastName || null, email, phone || null, birthDate || null, session.userId],
+      );
+      if (String(account.ROL).toLowerCase() === 'paciente') {
+        await connection.execute('UPDATE paciente SET EPS=? WHERE ID_USUARIO=?', [eps || null, session.userId]);
+      }
+      await connection.execute('INSERT INTO sync_event (EVENT_TYPE) VALUES (?)', ['profile.personal.updated']);
+      await connection.commit();
+      sendJson(response, 200, { user: await getAuthenticatedUser(request) });
+    } catch (error) {
+      await connection?.rollback().catch(() => {});
+      if (error.code === 'ER_DUP_ENTRY') sendJson(response, 409, { error: 'Ese correo ya está vinculado a otra cuenta.' });
+      else if (error.statusCode) sendJson(response, error.statusCode, { error: error.message });
+      else {
+        console.error('Profile update failed:', error.code || error.name || 'ProfileError');
+        sendJson(response, 500, { error: 'No se pudieron guardar los datos del perfil.' });
+      }
+    } finally {
+      connection?.release();
+    }
     return true;
   }
 

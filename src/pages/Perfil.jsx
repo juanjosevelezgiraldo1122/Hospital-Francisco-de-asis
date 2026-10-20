@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, LogOut, MapPin, Pencil, UserCircle, X } from 'lucide-react';
+import { CalendarDays, Check, LockKeyhole, LogOut, Mail, MapPin, Pencil, Phone, Save, UserCircle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { emptyAddressParts, formatColombianAddress, normalizeAddressParts } from '../../shared/colombianAddress';
 import { useAppData } from '../store';
@@ -13,7 +13,12 @@ const quadrants = [['', 'Sin orientación'], ['N', 'Norte'], ['S', 'Sur'], ['E',
 
 export default function Perfil() {
   const navigate = useNavigate();
-  const { currentUser, data, logout, updateUserAddress } = useAppData();
+  const { currentUser, data, logout, updateUserAddress, updateUserProfile } = useAppData();
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileDraft, setProfileDraft] = useState({});
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState('');
+  const [profileError, setProfileError] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
   const [addressDraft, setAddressDraft] = useState(() => ({ ...emptyAddressParts, ...(currentUser?.addressParts || {}) }));
   const [savingAddress, setSavingAddress] = useState(false);
@@ -38,6 +43,45 @@ export default function Perfil() {
     ['Registro profesional', profile.license],
     ['Sede', profile.sede],
   ].filter(([, value]) => value);
+
+  const startProfileEdit = () => {
+    const nameParts = String(profile.name || '').trim().split(/\s+/);
+    setProfileDraft({
+      firstName: profile.firstName || nameParts[0] || '',
+      middleName: profile.middleName || '',
+      lastName: profile.lastName || nameParts[1] || '',
+      secondLastName: profile.secondLastName || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      birthDate: profile.birthDate || '',
+      eps: profile.eps || '',
+    });
+    setProfileMessage('');
+    setProfileError(false);
+    setEditingProfile(true);
+  };
+  const setProfileValue = (field, value) => setProfileDraft((current) => ({ ...current, [field]: value }));
+  const cancelProfileEdit = () => {
+    setEditingProfile(false);
+    setProfileMessage('');
+  };
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    setSavingProfile(true);
+    setProfileMessage('');
+    setProfileError(false);
+    try {
+      const result = await updateUserProfile(profileDraft);
+      if (!result.ok) throw new Error(result.message);
+      setEditingProfile(false);
+      setProfileMessage('Tus datos personales se guardaron correctamente.');
+    } catch (error) {
+      setProfileError(true);
+      setProfileMessage(error.message || 'No se pudieron guardar los cambios.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   const setAddressValue = (field, value) => setAddressDraft((current) => ({ ...current, [field]: value }));
   const startAddressEdit = () => {
@@ -105,13 +149,41 @@ export default function Perfil() {
       <section className="profile-grid">
         <article id="profile-personal" className="profile-personal">
           <div className="profile-personal-heading">
-            <UserCircle size={24} />
-            <div><span className="eyebrow">Información de la cuenta</span><h2>Datos personales</h2></div>
+            <div className="profile-section-icon"><UserCircle size={22} /></div>
+            <div className="profile-personal-title"><span className="eyebrow">Información de la cuenta</span><h2>Datos personales</h2><p>Tu información de contacto y datos básicos.</p></div>
+            {!editingProfile ? <button type="button" className="btn btn-secondary profile-address-edit" onClick={startProfileEdit}><Pencil size={16} /> Editar datos</button> : null}
           </div>
-          {personalFields.length ? (
+          {editingProfile ? (
+            <form className="profile-edit-form" onSubmit={saveProfile}>
+              <div className="profile-form-section-title"><span>Información editable</span><small>Los cambios se guardan en tu cuenta.</small></div>
+              <div className="form-grid two">
+                <label>Primer nombre<input autoComplete="given-name" maxLength={60} value={profileDraft.firstName} onChange={(event) => setProfileValue('firstName', event.target.value)} required /></label>
+                <label>Segundo nombre <span className="profile-optional">Opcional</span><input autoComplete="additional-name" maxLength={60} value={profileDraft.middleName} onChange={(event) => setProfileValue('middleName', event.target.value)} /></label>
+                <label>Primer apellido<input autoComplete="family-name" maxLength={60} value={profileDraft.lastName} onChange={(event) => setProfileValue('lastName', event.target.value)} required /></label>
+                <label>Segundo apellido <span className="profile-optional">Opcional</span><input maxLength={60} value={profileDraft.secondLastName} onChange={(event) => setProfileValue('secondLastName', event.target.value)} /></label>
+                <label className="profile-field-wide">Correo electrónico<input type="email" autoComplete="email" maxLength={254} value={profileDraft.email} onChange={(event) => setProfileValue('email', event.target.value)} required /></label>
+                <label>Teléfono<input type="tel" autoComplete="tel" maxLength={24} value={profileDraft.phone} onChange={(event) => setProfileValue('phone', event.target.value)} /></label>
+                <label>Fecha de nacimiento<input type="date" autoComplete="bday" value={profileDraft.birthDate} onChange={(event) => setProfileValue('birthDate', event.target.value)} /></label>
+                {currentUser.role === 'patient' ? <label className="profile-field-wide">EPS<input maxLength={120} value={profileDraft.eps} onChange={(event) => setProfileValue('eps', event.target.value)} /></label> : null}
+              </div>
+              <div className="profile-locked-info"><LockKeyhole size={17} /><span><strong>Identidad protegida</strong>Documento, usuario y rol no se modifican desde esta pantalla.</span><span className="profile-locked-value">{[profile.typeId, profile.document].filter(Boolean).join(' ') || profile.username}</span></div>
+              {profileMessage ? <p className={`profile-address-message ${profileError ? 'error' : 'success'}`} role={profileError ? 'alert' : 'status'}>{profileMessage}</p> : null}
+              <div className="profile-address-actions">
+                <button type="button" className="btn btn-secondary" onClick={cancelProfileEdit} disabled={savingProfile}><X size={16} /> Cancelar</button>
+                <button type="submit" className="btn btn-primary" disabled={savingProfile}><Save size={16} /> {savingProfile ? 'Guardando…' : 'Guardar cambios'}</button>
+              </div>
+            </form>
+          ) : personalFields.length ? (
+            <>
             <dl className="profile-facts">
-              {personalFields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+              {personalFields.map(([label, value]) => {
+                const Icon = label === 'Correo electrónico' ? Mail : label === 'Teléfono' ? Phone : label === 'Fecha de nacimiento' ? CalendarDays : null;
+                return <div key={label}><dt>{Icon ? <Icon size={15} /> : null}{label}</dt><dd>{value}</dd></div>;
+              })}
             </dl>
+            <div className="profile-identity-note"><LockKeyhole size={16} /><span>Documento, usuario y rol están protegidos.</span></div>
+            {profileMessage ? <p className="profile-address-message success" role="status">{profileMessage}</p> : null}
+            </>
           ) : <p>No hay datos personales adicionales registrados.</p>}
         </article>
 
