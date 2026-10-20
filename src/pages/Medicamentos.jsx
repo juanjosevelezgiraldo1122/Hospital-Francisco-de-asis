@@ -1,6 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard, Home, PackageCheck, Pill, Search, Truck } from 'lucide-react';
+import {
+  Check,
+  Clock3,
+  CreditCard,
+  Mail,
+  MapPin,
+  PackageCheck,
+  Phone,
+  Pill,
+  Search,
+  Truck,
+} from 'lucide-react';
 import { useAppData } from '../store';
 
 const prescriptionKey = (prescription) =>
@@ -9,15 +20,12 @@ const prescriptionKey = (prescription) =>
 export default function Medicamentos() {
   const navigate = useNavigate();
   const { currentUser, data, createDelivery } = useAppData();
+  const isPatient = currentUser.role === 'patient';
   const prescriptionItems = useMemo(() => {
-    const realPrescriptions =
-      currentUser.role === 'patient'
-        ? data.prescriptions.filter((item) => item.patientId === currentUser.id)
-        : data.prescriptions;
-
-    return realPrescriptions;
-  }, [currentUser.id, currentUser.role, data.prescriptions]);
-  const [selected, setSelected] = useState(null);
+    if (!isPatient) return data.prescriptions;
+    return data.prescriptions.filter((item) => item.patientId === currentUser.id);
+  }, [currentUser.id, isPatient, data.prescriptions]);
+  const [selected, setSelected] = useState([]);
   const [medicineQuery, setMedicineQuery] = useState('');
   const [delivery, setDelivery] = useState({
     address: currentUser.address || '',
@@ -29,32 +37,29 @@ export default function Medicamentos() {
   const [confirmed, setConfirmed] = useState('');
   const [error, setError] = useState('');
 
-  const selectedKeys = selected || prescriptionItems
-    .filter((prescription) => (data.inventory.find((item) => item.medicine === prescription.medicine)?.stock || 0) > 0)
-    .map(prescriptionKey);
   const stockFor = (medicine) => data.inventory.find((item) => item.medicine === medicine)?.stock || 0;
+  const selectedPrescriptions = prescriptionItems.filter((prescription) =>
+    selected.includes(prescriptionKey(prescription)) && stockFor(prescription.medicine) > 0,
+  );
+  const availableCount = prescriptionItems.filter((prescription) => stockFor(prescription.medicine) > 0).length;
+  const visiblePrescriptions = prescriptionItems.filter((prescription) =>
+    `${prescription.medicine} ${prescription.dose || ''} ${prescription.doctorName || ''}`
+      .toLocaleLowerCase()
+      .includes(medicineQuery.trim().toLocaleLowerCase()),
+  );
 
   const toggleMedicine = (prescription) => {
     const key = prescriptionKey(prescription);
-    setSelected((current) =>
-      (current || selectedKeys).includes(key)
-        ? (current || selectedKeys).filter((item) => item !== key)
-        : [...(current || selectedKeys), key],
-    );
+    setSelected((current) => current.includes(key)
+      ? current.filter((item) => item !== key)
+      : [...current, key]);
     setConfirmed('');
     setError('');
   };
 
-  const selectedPrescriptions = prescriptionItems.filter((prescription) =>
-    selectedKeys.includes(prescriptionKey(prescription)) && stockFor(prescription.medicine) > 0,
-  );
-  const visiblePrescriptions = prescriptionItems.filter((prescription) =>
-    `${prescription.medicine} ${prescription.dose || ''} ${prescription.doctorName || ''}`.toLocaleLowerCase().includes(medicineQuery.trim().toLocaleLowerCase()),
-  );
-
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (currentUser.role !== 'patient') return;
+    if (!isPatient || !selectedPrescriptions.length) return;
 
     const result = await createDelivery({
       address: delivery.address,
@@ -87,167 +92,200 @@ export default function Medicamentos() {
   };
 
   return (
-    <section className="page-content medicine-layout">
-      <header className="module-header medicine-header">
+    <section className="page-content medicine-page">
+      <header className="medicine-page-header">
         <div>
-          <span className="eyebrow">Paciente - tratamiento</span>
-          <h1>Medicamentos prescritos y solicitud de domicilio</h1>
-          <p>
-            Solo se muestran tratamientos asociados a citas finalizadas, con dosis, frecuencia,
-            duracion y medico responsable.
-          </p>
+          <span className="medicine-kicker"><Pill size={16} /> Portal de salud / Farmacia</span>
+          <h1>Medicamentos</h1>
+          <p>Consulta tus tratamientos prescritos y organiza la entrega de los que necesitas.</p>
         </div>
-        <div className="module-chip">
-          <Pill size={24} />
-          HU05 - HU08
-        </div>
+        <span className="medicine-view-label">
+          {isPatient ? 'Plan de tratamiento' : 'Vista de prescripciones'}
+        </span>
       </header>
 
-      <section className="medicine-board">
-        <div className="treatment-list" aria-labelledby="treatments-title">
-          <div className="section-intro compact">
-            <span className="eyebrow">Tratamientos</span>
-            <h2 id="treatments-title">Citas finalizadas</h2>
-          </div>
-          <label className="search-box medication-list-search"><Search size={18} /><input value={medicineQuery} onChange={(event) => setMedicineQuery(event.target.value)} placeholder="Buscar medicamento" aria-label="Buscar medicamento prescrito" /></label>
-
-          {visiblePrescriptions.length ? visiblePrescriptions.map((prescription) => (
-            <article className="treatment-card" key={prescriptionKey(prescription)}>
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedKeys.includes(prescriptionKey(prescription))}
-                  disabled={!stockFor(prescription.medicine)}
-                  onChange={() => toggleMedicine(prescription)}
-                />
-                <span />
-              </label>
-              <div>
-                <strong>{prescription.medicine}</strong>
-                <p>{prescription.diagnosis || 'Tratamiento asociado a una cita finalizada.'}</p>
-                <span className={`stock-indicator${stockFor(prescription.medicine) ? '' : ' unavailable'}`}>
-                  {stockFor(prescription.medicine) ? `${stockFor(prescription.medicine)} disponibles` : 'Agotado'}
-                </span>
-                <dl>
-                  <div>
-                    <dt>Dosis</dt>
-                    <dd>{prescription.dose}</dd>
-                  </div>
-                  <div>
-                    <dt>Frecuencia</dt>
-                    <dd>{prescription.frequency}</dd>
-                  </div>
-                  <div>
-                    <dt>Duracion</dt>
-                    <dd>{prescription.duration}</dd>
-                  </div>
-                </dl>
-              </div>
-              <small>
-                {prescription.date || prescription.createdAt || 'Registro clinico'}
-                <br />
-                {prescription.doctorName}
-              </small>
-            </article>
-          )) : <p className="empty-state">{prescriptionItems.length ? 'No hay medicamentos que coincidan con la busqueda.' : 'Aun no hay tratamientos para mostrar.'}</p>}
+      <section className="medicine-overview" aria-label="Resumen de tratamientos">
+        <div className="medicine-overview-item">
+          <span>Tratamientos</span>
+          <strong>{prescriptionItems.length}</strong>
+          <small>prescripciones registradas</small>
         </div>
+        <div className="medicine-overview-item">
+          <span>Con disponibilidad</span>
+          <strong>{availableCount}</strong>
+          <small>con inventario para solicitar</small>
+        </div>
+        <div className="medicine-overview-item medicine-overview-accent">
+          <span>{isPatient ? 'En tu solicitud' : 'Tipo de vista'}</span>
+          <strong>{isPatient ? selectedPrescriptions.length : 'Clínica'}</strong>
+          <small>{isPatient ? 'medicamentos seleccionados' : 'seguimiento de tratamientos'}</small>
+        </div>
+      </section>
 
-        <aside className="delivery-panel" aria-labelledby="delivery-title">
-          <div className="delivery-icon">
-            <Truck size={30} />
-          </div>
-          <div className="section-intro compact">
-            <span className="eyebrow">Domicilio</span>
-            <h2 id="delivery-title">Solicitud de envio</h2>
+      <div className="medicine-workspace">
+        <section className="medicine-prescriptions" aria-labelledby="prescriptions-title">
+          <div className="medicine-section-heading">
+            <div>
+              <span className="medicine-section-label">Tratamientos</span>
+              <h2 id="prescriptions-title">Tus prescripciones</h2>
+            </div>
+            <span className="medicine-count">{prescriptionItems.length}</span>
           </div>
 
-          {currentUser.role === 'patient' ? (
-            <>
-              <form className="delivery-form" onSubmit={handleSubmit}>
-                <div className="form-grid two">
-                  <label>
-                    Telefono de contacto
-                    <input value={delivery.phone} onChange={(event) => setDelivery((current) => ({ ...current, phone: event.target.value }))} required />
-                  </label>
-                  <label>
-                    Correo de contacto
-                    <input type="email" value={delivery.email} onChange={(event) => setDelivery((current) => ({ ...current, email: event.target.value }))} required />
-                  </label>
-                </div>
+          <label className="medicine-search">
+            <Search size={18} aria-hidden="true" />
+            <input
+              value={medicineQuery}
+              onChange={(event) => setMedicineQuery(event.target.value)}
+              placeholder="Buscar por medicamento o médico"
+              aria-label="Buscar por medicamento o médico"
+            />
+          </label>
+
+          {visiblePrescriptions.length ? (
+            <div className="medicine-prescription-list">
+              {visiblePrescriptions.map((prescription) => {
+                const key = prescriptionKey(prescription);
+                const stock = stockFor(prescription.medicine);
+                const isSelected = selected.includes(key);
+                return (
+                  <article className={`medicine-prescription${isSelected ? ' is-selected' : ''}`} key={key}>
+                    <label className="medicine-prescription-select">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={!isPatient || !stock}
+                        onChange={() => toggleMedicine(prescription)}
+                        aria-label={`Incluir ${prescription.medicine} en la solicitud`}
+                      />
+                      <span className="medicine-checkmark"><Check size={14} /></span>
+                      <span className="medicine-drug-icon"><Pill size={19} /></span>
+                      <span className="medicine-prescription-content">
+                        <span className="medicine-prescription-topline">
+                          <strong>{prescription.medicine}</strong>
+                          <span className={`medicine-stock${stock ? '' : ' is-empty'}`}>
+                            <span />{stock ? `${stock} disponibles` : 'Agotado'}
+                          </span>
+                        </span>
+                        <span className="medicine-diagnosis">
+                          {prescription.diagnosis || 'Tratamiento asociado a una cita finalizada.'}
+                        </span>
+                        <span className="medicine-dose-grid">
+                          <span><small>Dosis</small><strong>{prescription.dose || 'No registrada'}</strong></span>
+                          <span><small>Frecuencia</small><strong>{prescription.frequency || 'No registrada'}</strong></span>
+                          <span><small>Duración</small><strong>{prescription.duration || 'No registrada'}</strong></span>
+                        </span>
+                        <span className="medicine-prescription-meta">
+                          <span><Clock3 size={14} /> {prescription.date || prescription.createdAt || 'Registro clínico'}</span>
+                          {prescription.doctorName ? <span>{prescription.doctorName}</span> : null}
+                        </span>
+                      </span>
+                    </label>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="medicine-empty-state">
+              <span><Pill size={23} /></span>
+              <strong>{prescriptionItems.length ? 'No encontramos coincidencias' : 'Aún no hay tratamientos'}</strong>
+              <p>{prescriptionItems.length
+                ? 'Prueba con otro nombre de medicamento o médico.'
+                : 'Las prescripciones aparecerán aquí cuando estén disponibles.'}</p>
+            </div>
+          )}
+        </section>
+
+        <aside className="medicine-order-panel" aria-labelledby="delivery-title">
+          <div className="medicine-order-heading">
+            <span className="medicine-order-icon"><Truck size={21} /></span>
+            <div>
+              <span className="medicine-section-label">Entrega</span>
+              <h2 id="delivery-title">Solicitar domicilio</h2>
+            </div>
+          </div>
+
+          {isPatient ? (
+            <form className="medicine-order-form" onSubmit={handleSubmit}>
+              <div className="medicine-contact-grid">
                 <label>
-                  Direccion de entrega
+                  <span><Phone size={14} /> Teléfono</span>
                   <input
-                    value={delivery.address}
-                    onChange={(event) =>
-                      setDelivery((current) => ({ ...current, address: event.target.value }))
-                    }
+                    value={delivery.phone}
+                    onChange={(event) => setDelivery((current) => ({ ...current, phone: event.target.value }))}
+                    autoComplete="tel"
                     required
                   />
                 </label>
                 <label>
-                  Indicaciones para la entrega
-                  <textarea value={delivery.deliveryNotes} onChange={(event) => setDelivery((current) => ({ ...current, deliveryNotes: event.target.value }))} placeholder="Barrio, porteria u horario preferido" />
+                  <span><Mail size={14} /> Correo</span>
+                  <input
+                    type="email"
+                    value={delivery.email}
+                    onChange={(event) => setDelivery((current) => ({ ...current, email: event.target.value }))}
+                    autoComplete="email"
+                    required
+                  />
                 </label>
-                <label>
-                  Metodo de pago
-                  <select
-                    value={delivery.payment}
-                    onChange={(event) =>
-                      setDelivery((current) => ({ ...current, payment: event.target.value }))
-                    }
-                  >
-                    <option value="en_linea">Pago en linea</option>
-                    <option value="contra_entrega">Contra entrega</option>
-                  </select>
-                </label>
+              </div>
+              <label>
+                <span><MapPin size={14} /> Dirección de entrega</span>
+                <input
+                  value={delivery.address}
+                  onChange={(event) => setDelivery((current) => ({ ...current, address: event.target.value }))}
+                  autoComplete="street-address"
+                  required
+                />
+              </label>
+              <label>
+                Indicaciones <small className="medicine-optional">Opcional</small>
+                <textarea
+                  value={delivery.deliveryNotes}
+                  onChange={(event) => setDelivery((current) => ({ ...current, deliveryNotes: event.target.value }))}
+                  placeholder="Barrio, portería u horario preferido"
+                  rows={2}
+                />
+              </label>
+              <label>
+                <span><CreditCard size={14} /> Método de pago</span>
+                <select
+                  value={delivery.payment}
+                  onChange={(event) => setDelivery((current) => ({ ...current, payment: event.target.value }))}
+                >
+                  <option value="en_linea">Pago en línea</option>
+                  <option value="contra_entrega">Contra entrega</option>
+                </select>
+              </label>
 
-                <div className="delivery-summary">
-                  <strong>Resumen previo</strong>
-                  {selectedPrescriptions.length ? (
-                    selectedPrescriptions.map((item) => <span key={prescriptionKey(item)}>{item.medicine}</span>)
-                  ) : (
-                    <span>Selecciona al menos un medicamento.</span>
-                  )}
-                  <span>{delivery.address}</span>
-                  <span>{delivery.phone} · {delivery.email}</span>
-                  <span>{delivery.payment === 'en_linea' ? 'Pago en linea' : 'Pago contra entrega'}</span>
-                </div>
+              <div className="medicine-order-summary" aria-live="polite">
+                <div><span>Medicamentos</span><strong>{selectedPrescriptions.length}</strong></div>
+                {selectedPrescriptions.length ? (
+                  <ul>
+                    {selectedPrescriptions.map((item) => (
+                      <li key={prescriptionKey(item)}><Check size={14} /> {item.medicine}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>Selecciona los tratamientos que deseas recibir.</p>
+                )}
+              </div>
 
-                {error ? <p className="form-message error">{error}</p> : null}
+              {error ? <p className="form-message error" role="alert">{error}</p> : null}
+              {confirmed ? <p className="form-message success" role="status">{confirmed}</p> : null}
 
-                <button className="btn btn-primary full" type="submit" disabled={!selectedPrescriptions.length}>
-                  <PackageCheck size={18} />
-                  Confirmar solicitud
-                </button>
-              </form>
-
-              {confirmed ? <p className="form-message success">{confirmed}</p> : null}
-            </>
+              <button className="btn btn-primary full medicine-submit" type="submit" disabled={!selectedPrescriptions.length}>
+                <PackageCheck size={18} />
+                Continuar con la solicitud
+              </button>
+            </form>
           ) : (
-            <p className="empty-state">El medico puede revisar tratamientos; el domicilio lo confirma el paciente.</p>
+            <div className="medicine-clinical-note">
+              <PackageCheck size={20} />
+              <p>El domicilio de medicamentos se solicita desde la cuenta del paciente.</p>
+            </div>
           )}
         </aside>
-      </section>
-
-      <section className="medicine-rules">
-        <article>
-          <Home size={22} />
-          <strong>Direccion editable</strong>
-          <span>El paciente puede actualizarla antes de confirmar.</span>
-        </article>
-        <article>
-          <CreditCard size={22} />
-          <strong>Pago permitido</strong>
-          <span>En linea o contra entrega, como define la BD.</span>
-        </article>
-        <article>
-          <Pill size={22} />
-          <strong>Solo finalizadas</strong>
-          <span>No se listan medicamentos de citas pendientes o en curso.</span>
-        </article>
-      </section>
+      </div>
     </section>
   );
 }
-
-
