@@ -295,8 +295,7 @@ const lookupLogin = async (identifier) => {
       u.PASSWORD_HASH, r.NOMBRE AS ROL
      FROM usuario u LEFT JOIN paciente p ON p.ID_USUARIO = u.ID_USUARIO
      JOIN rol r ON r.ID_ROL = u.ID_ROL
-     WHERE LOWER(r.NOMBRE) = 'paciente'
-       AND (LOWER(u.USUARIO_LOGIN) = ? OR LOWER(u.NUMERO_DOCUMENTO) = ? OR LOWER(u.EMAIL) = ?)
+     WHERE (LOWER(u.USUARIO_LOGIN) = ? OR LOWER(u.NUMERO_DOCUMENTO) = ? OR LOWER(u.EMAIL) = ?)
      LIMIT 1`,
     [identifier, identifier, identifier],
   );
