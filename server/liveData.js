@@ -27,6 +27,15 @@ const passwordHash = async (password) => {
   return `scrypt$${salt.toString('base64url')}$${Buffer.from(hash).toString('base64url')}`;
 };
 
+async function getRoleId(connection, roleName) {
+  const [[role]] = await connection.execute(
+    'SELECT ID_ROL FROM rol WHERE LOWER(NOMBRE)=? LIMIT 1',
+    [roleName],
+  );
+  if (!role) throw fail(409, `El rol ${roleName} no está configurado en la base de datos.`);
+  return Number(role.ID_ROL);
+}
+
 async function transaction(type, fn) {
   const connection = await pool.getConnection();
   try {
@@ -81,7 +90,7 @@ export async function readState(user) {
     JOIN cita c ON c.ID_CITA=h.ID_CITA JOIN medico m ON m.NUMERO_LICENCIA=c.NUMERO_LICENCIA JOIN usuario du ON du.ID_USUARIO=m.ID_USUARIO JOIN usuario p ON p.ID_USUARIO=pr.ID_PACIENTE
     WHERE (?='doctor' AND m.ID_USUARIO=?) OR (?='patient' AND pr.ID_PACIENTE=?)`,[user.role,user.databaseId,user.role,user.databaseId]);
   const prescriptions = prescriptionRows.map((r) => ({ id:String(r.ID_PRESCRIPCION), recordId:String(r.ID_HISTORIAL), appointmentId:String(r.ID_CITA), patientId:`PAT-DB-${r.ID_PACIENTE}`, patientName:`${r.PN1} ${r.PA1}`, doctorId:`PAT-DB-${r.DOC_ID}`, doctorName:`${r.DN1} ${r.DA1}`, medicineId:String(r.ID_MEDICAMENTO), medicine:r.MEDICAMENTO, dose:r.DOSIS, frequency:r.FRECUENCIA, duration:r.DURACION, indications:r.INDICACIONES||'', date:date(r.FECHA_CITA) }));
-  const [meds] = await pool.query(`SELECT m.ID_MEDICAMENTO,m.NOMBRE,m.CODIGO,m.DESCRIPCION,m.FABRICANTE,m.ACTIVO,i.EXISTENCIAS FROM medicamento m JOIN inventario_medicamento i ON i.ID_MEDICAMENTO=m.ID_MEDICAMENTO ORDER BY m.NOMBRE`);
+  const [meds] = await pool.query(`SELECT m.ID_MEDICAMENTO,m.NOMBRE,m.CODIGO,m.DESCRIPCION,m.FABRICANTE,m.ACTIVO,i.EXISTENCIAS FROM medicamento m LEFT JOIN inventario_medicamento i ON i.ID_MEDICAMENTO=m.ID_MEDICAMENTO ORDER BY m.NOMBRE`);
   let orderSql = `SELECT se.*,u.NOMBRE_1,u.APELLIDO_1,u.NUMERO_DOCUMENTO FROM solicitud_envio se JOIN usuario u ON u.ID_USUARIO=se.ID_PACIENTE`;
   const args=[];
   if(user.role==='patient'){orderSql+=' WHERE se.ID_PACIENTE=?';args.push(user.databaseId)}
@@ -139,8 +148,8 @@ export async function handleLiveDataRequest(request, response, url) {
       const secondLastName = rawLastNames.join(' ') || null;
       const password = String(body.password || '');
       if (!firstName || !lastName || !document || !/^\S+@\S+\.\S+$/.test(email) || password.length < 7) throw fail(400, 'Completa los datos requeridos; la contraseña requiere mínimo 7 caracteres.');
-      const roleId = ({ paciente: 101, medico: 201, secretaria: 301 })[role];
       const result = await transaction('user.created', async (connection) => {
+        const roleId = await getRoleId(connection, role);
         const [created] = await connection.execute(`INSERT INTO usuario (TIPO_DOCUMENTO,NUMERO_DOCUMENTO,NOMBRE_1,NOMBRE_2,APELLIDO_1,APELLIDO_2,EMAIL,USUARIO_LOGIN,PASSWORD_HASH,TELEFONO,FECHA_NACIMIENTO,ID_ROL)
           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [typeId, document, firstName, secondName, lastName, secondLastName, email, String(body.username || document).slice(0,32), await passwordHash(password), phone || null, body.birthDate || null, roleId]);
         const newId = created.insertId;
@@ -164,9 +173,11 @@ export async function handleLiveDataRequest(request, response, url) {
 
     const roleUserId=url.pathname.match(/^\/api\/admin\/users\/(\d+)\/role$/)?.[1];
     if(roleUserId&&request.method==='PATCH'){
-      requireRole(user,'admin');const body=await requestBody(request);const roleId=({patient:101,doctor:201,secretary:301})[body.role];if(!roleId)throw fail(400,'Rol no permitido.');
+      requireRole(user,'admin');const body=await requestBody(request);const roleName=({patient:'paciente',doctor:'medico',secretary:'secretaria'})[body.role];if(!roleName)throw fail(400,'Rol no permitido.');
       await transaction('user.role.updated',async(connection)=>{
-        const [[target]]=await connection.execute('SELECT ID_USUARIO,NUMERO_DOCUMENTO,ID_ROL FROM usuario WHERE ID_USUARIO=? FOR UPDATE',[roleUserId]);if(!target)throw fail(404,'Cuenta no encontrada.');if(Number(target.ID_ROL)===401)throw fail(403,'No se puede cambiar la cuenta administradora.');
+        const roleId=await getRoleId(connection,roleName);
+        const adminRoleId=await getRoleId(connection,'administrador');
+        const [[target]]=await connection.execute('SELECT ID_USUARIO,NUMERO_DOCUMENTO,ID_ROL FROM usuario WHERE ID_USUARIO=? FOR UPDATE',[roleUserId]);if(!target)throw fail(404,'Cuenta no encontrada.');if(Number(target.ID_ROL)===adminRoleId)throw fail(403,'No se puede cambiar la cuenta administradora.');
         if(body.role==='patient') await connection.execute('INSERT IGNORE INTO paciente (ID_USUARIO) VALUES (?)',[roleUserId]);
         if(body.role==='doctor'){
           const [[specialty]]=await connection.execute("SELECT ID_ESPECIALIDAD FROM especialidad WHERE ACTIVA=1 ORDER BY ID_ESPECIALIDAD LIMIT 1");const [[site]]=await connection.execute('SELECT ID_SEDE FROM sede WHERE ACTIVA=1 ORDER BY ID_SEDE LIMIT 1');if(!specialty||!site)throw fail(409,'Registra primero una especialidad y una sede activas.');
@@ -181,7 +192,7 @@ export async function handleLiveDataRequest(request, response, url) {
     if(userId&&request.method==='PATCH'){
       requireRole(user,'admin');const body=await requestBody(request);
       const allowed={TELEFONO:String(body.phone||'').slice(0,30)||null,EMAIL:String(body.email||'').trim().toLowerCase()||null};
-      await transaction('user.updated',async(connection)=>{const [result]=await connection.execute('UPDATE usuario SET TELEFONO=?,EMAIL=? WHERE ID_USUARIO=? AND ID_ROL<>401',[allowed.TELEFONO,allowed.EMAIL,userId]);if(!result.affectedRows)throw fail(404,'Cuenta no encontrada o protegida.');});sendJson(response,200,{ok:true});return true;
+      await transaction('user.updated',async(connection)=>{const adminRoleId=await getRoleId(connection,'administrador');const [result]=await connection.execute('UPDATE usuario SET TELEFONO=?,EMAIL=? WHERE ID_USUARIO=? AND ID_ROL<>?',[allowed.TELEFONO,allowed.EMAIL,userId,adminRoleId]);if(!result.affectedRows)throw fail(404,'Cuenta no encontrada o protegida.');});sendJson(response,200,{ok:true});return true;
     }
 
     if (url.pathname === '/api/appointments' && request.method === 'POST') {
@@ -329,6 +340,12 @@ export async function handleLiveDataRequest(request, response, url) {
     }
     sendJson(response, 404, { error: 'Ruta de datos no encontrada.' });
   } catch (error) {
+    if (!error.status) console.error('Live data request failed', {
+      route: url.pathname,
+      code: error.code || error.name || 'DatabaseError',
+      sqlState: error.sqlState || undefined,
+      message: error.sqlMessage || error.message || 'Unknown error',
+    });
     sendJson(response, error.status || 500, { error: error.status ? error.message : 'No se pudieron consultar los datos en MySQL.' });
   }
   return true;

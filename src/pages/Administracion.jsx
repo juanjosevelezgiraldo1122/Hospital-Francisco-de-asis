@@ -391,7 +391,6 @@ export default function Administracion() {
                   <option value="doctor">Medico</option>
                   <option value="secretary">Secretaria</option>
                   <option value="patient">Paciente</option>
-                  <option value="admin">Administrador</option>
                 </select>
                 <span className="lock-note">
                   <RoleIcon size={16} />

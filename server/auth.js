@@ -79,13 +79,17 @@ const randomToken = (bytes = 32) => randomBytes(bytes).toString('base64url');
 const callbackUri = (provider) => `${redirectBase}/${provider}/callback`;
 const cookieName = (provider) => `hf_oauth_${provider}`;
 const cookieValue = (request, name) => {
-  const item = (request.headers.cookie || '').split(';').map((entry) => entry.trim()).find((entry) => entry.startsWith(`${name}=`));
+  const items = (request.headers.cookie || '').split(';').map((entry) => entry.trim()).filter((entry) => entry.startsWith(`${name}=`));
+  const item = items.at(-1);
   return item ? decodeURIComponent(item.slice(name.length + 1)) : '';
 };
 const cookieHeader = (provider, value, maxAge) => `${cookieName(provider)}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
 const secureCookie = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-const sessionCookie = (value) => `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/api/auth${secureCookie}`;
-const expiredSessionCookie = (name) => `${name}=; HttpOnly; SameSite=Lax; Path=/api/auth; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secureCookie}`;
+const expiredSessionCookie = (name, path = '/api/auth') => `${name}=; HttpOnly; SameSite=Lax; Path=${path}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secureCookie}`;
+const sessionCookies = (value) => [
+  `${sessionCookieName}=${encodeURIComponent(value)}; HttpOnly; SameSite=Lax; Path=/${secureCookie}`,
+  expiredSessionCookie(sessionCookieName, '/api/auth'),
+];
 const issueSession = async (userId) => {
   const token = randomToken(32);
   const tokenHash = resetTokenHash(token);
@@ -346,9 +350,15 @@ export async function handleAuthRequest(request, response, url) {
       if (databaseConfigured && legacyToken) {
         await pool.execute('DELETE FROM app_session WHERE TOKEN_HASH = ?', [resetTokenHash(legacyToken)]);
       }
-      sendJson(response, 200, { user: await getAuthenticatedUser(request) }, {
-        'Set-Cookie': expiredSessionCookie(legacySessionCookieName),
-      });
+      const session = databaseConfigured ? await activeSession(request) : null;
+      const user = await getAuthenticatedUser(request);
+      const cookies = [expiredSessionCookie(legacySessionCookieName), expiredSessionCookie(sessionCookieName)];
+      if (session && user) {
+        const replacementToken = await issueSession(session.userId);
+        await pool.execute('DELETE FROM app_session WHERE ID_SESSION = ?', [session.sessionId]);
+        cookies.push(...sessionCookies(replacementToken));
+      }
+      sendJson(response, 200, { user }, { 'Set-Cookie': cookies });
     } catch (error) {
       console.error('Session lookup failed:', error.code || error.name || 'SessionError');
       sendJson(response, 503, { error: 'No se pudo validar la sesión en MySQL.' });
@@ -364,7 +374,7 @@ export async function handleAuthRequest(request, response, url) {
       await pool.execute('DELETE FROM app_session WHERE TOKEN_HASH = ?', [resetTokenHash(legacyToken)]);
     }
     sendJson(response, 200, { ok: true }, {
-      'Set-Cookie': [expiredSessionCookie(sessionCookieName), expiredSessionCookie(legacySessionCookieName)],
+      'Set-Cookie': [expiredSessionCookie(sessionCookieName, '/'), expiredSessionCookie(sessionCookieName, '/api/auth'), expiredSessionCookie(legacySessionCookieName)],
     });
     return true;
   }
@@ -600,7 +610,7 @@ export async function handleAuthRequest(request, response, url) {
         sendJson(response, 401, { error: 'Credenciales incorrectas.' });
         return true;
       }
-      sendJson(response, 200, { user: publicUser(row) }, { 'Set-Cookie': sessionCookie(await issueSession(row.ID_USUARIO)) });
+      sendJson(response, 200, { user: publicUser(row) }, { 'Set-Cookie': sessionCookies(await issueSession(row.ID_USUARIO)) });
     } catch (error) {
       console.error('Credential login failed:', error.code || error.name || 'AuthError');
       sendJson(response, 500, { error: 'No se pudo validar la cuenta en este momento.' });
@@ -638,7 +648,7 @@ export async function handleAuthRequest(request, response, url) {
         `SELECT u.*,p.EPS,r.NOMBRE AS ROL FROM usuario u JOIN paciente p ON p.ID_USUARIO=u.ID_USUARIO JOIN rol r ON r.ID_ROL=u.ID_ROL WHERE u.ID_USUARIO=?`,
         [created.insertId],
       );
-      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookie(await issueSession(created.insertId)) });
+      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookies(await issueSession(created.insertId)) });
     } catch (error) {
       await connection?.rollback().catch(() => {});
       if (error.code === 'ER_DUP_ENTRY') sendJson(response, 409, { error: 'El documento o correo ya está registrado.' });
@@ -766,7 +776,7 @@ export async function handleAuthRequest(request, response, url) {
         return true;
       }
       oauthTickets.delete(ticket);
-      sendJson(response, 200, { user: publicUser(linked) }, { 'Set-Cookie': sessionCookie(await issueSession(linked.ID_USUARIO)) });
+      sendJson(response, 200, { user: publicUser(linked) }, { 'Set-Cookie': sessionCookies(await issueSession(linked.ID_USUARIO)) });
     } catch (error) {
       console.error('OAuth account lookup failed:', error.code || error.name || 'AuthError');
       sendJson(response, 500, { error: 'No se pudo completar el inicio de sesión.' });
@@ -837,7 +847,7 @@ export async function handleAuthRequest(request, response, url) {
          JOIN rol r ON r.ID_ROL = u.ID_ROL WHERE u.ID_USUARIO = ?`,
         [userId],
       );
-      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookie(await issueSession(userId)) });
+      sendJson(response, 201, { user: publicUser(rows[0]) }, { 'Set-Cookie': sessionCookies(await issueSession(userId)) });
     } catch (error) {
       if (connection) await connection.rollback().catch(() => {});
       if (error.code === 'ER_DUP_ENTRY') {

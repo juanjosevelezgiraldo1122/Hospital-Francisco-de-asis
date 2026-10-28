@@ -40,6 +40,17 @@ export async function checkDatabaseConnection() {
   const existingTables = new Set(tableRows.map(({ TABLE_NAME }) => TABLE_NAME.toLowerCase()));
   const missingTables = requiredTables.filter((table) => !existingTables.has(table));
   const requiredColumns = [
+    ['rol', 'ID_ROL'],
+    ['rol', 'NOMBRE'],
+    ['medicamento', 'ID_MEDICAMENTO'],
+    ['medicamento', 'NOMBRE'],
+    ['medicamento', 'ACTIVO'],
+    ['inventario_medicamento', 'ID_MEDICAMENTO'],
+    ['inventario_medicamento', 'EXISTENCIAS'],
+    ['sede', 'ID_SEDE'],
+    ['sede', 'ACTIVA'],
+    ['especialidad', 'ID_ESPECIALIDAD'],
+    ['especialidad', 'ACTIVA'],
     ['usuario', 'USUARIO_LOGIN'],
     ['usuario', 'DIRECCION_TIPO_VIA'],
     ['usuario', 'DIRECCION_NUMERO_VIA'],
@@ -61,10 +72,27 @@ export async function checkDatabaseConnection() {
     .map(([table, column]) => `${table}.${column}`)
     .filter((column) => !existingColumns.has(column.toLowerCase()));
 
+  const [catalogRows] = await pool.query(`
+    SELECT COUNT(*) AS totalMedicamentos,
+      COALESCE(SUM(m.ACTIVO=1),0) AS medicamentosActivos,
+      COALESCE(SUM(i.ID_MEDICAMENTO IS NOT NULL),0) AS medicamentosConInventario,
+      COALESCE(SUM(m.ACTIVO=1 AND i.ID_MEDICAMENTO IS NOT NULL),0) AS visiblesEnPanel
+    FROM medicamento m LEFT JOIN inventario_medicamento i ON i.ID_MEDICAMENTO=m.ID_MEDICAMENTO
+  `);
+  const [setupRows] = await pool.query(`
+    SELECT
+      (SELECT COUNT(*) FROM sede WHERE ACTIVA=1) AS sedesActivas,
+      (SELECT COUNT(*) FROM especialidad WHERE ACTIVA=1) AS especialidadesActivas
+  `);
+  const [roleRows] = await pool.query('SELECT LOWER(NOMBRE) AS nombre FROM rol ORDER BY ID_ROL');
+
   return {
     ...rows[0],
     schemaReady: missingTables.length === 0 && missingColumns.length === 0,
     missingTables,
     missingColumns,
+    catalog: catalogRows[0],
+    setup: setupRows[0],
+    configuredRoles: roleRows.map(({ nombre }) => nombre),
   };
 }
