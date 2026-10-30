@@ -1,0 +1,84 @@
+# SISTEMA MEDICO: frontend (Nginx), API (Node.js) y MySQL.
+#
+# Inicio en Windows:
+#   1. Copia .env.docker.example a .env y reemplaza las dos contrasenas.
+#      PowerShell: Copy-Item .env.docker.example .env
+#   2. Ejecuta desde esta carpeta: docker compose up --build
+#   3. Abre http://localhost:8080
+#
+# Frontend: Dockerfile.frontend y docker/nginx.conf.
+# Backend: Dockerfile.backend. Nginx reenvia /api al servicio backend.
+# Base de datos: Dockerfile.database. El esquema inicial se importa una sola
+# vez cuando MySQL crea un volumen vacio. El SQL de reinicio contiene DROP DB.
+#
+# mysql_data conserva los registros al detener los contenedores. Usa
+# `docker compose down` para apagarlos. `docker compose down -v` borra la base.
+# MySQL solo se publica en localhost; cambia DB_PUBLISHED_PORT si el puerto
+# 3306 ya esta ocupado. WEB_PUBLISHED_PORT permite cambiar el puerto web.
+
+services:
+  database:
+    build:
+      context: .
+      dockerfile: Dockerfile.database
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: hospital_francisco_asis
+      MYSQL_USER: hospital_app
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${DB_PUBLISHED_PORT:-3306}:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      DB_HOST: database
+      DB_PORT: 3306
+      DB_NAME: hospital_francisco_asis
+      DB_USER: hospital_app
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      DB_SSL: "false"
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
+      OAUTH_REDIRECT_BASE: ${OAUTH_REDIRECT_BASE:-http://localhost:8080/api/auth}
+    depends_on:
+      database:
+        condition: service_healthy
+    expose:
+      - "3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/db-health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${WEB_PUBLISHED_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

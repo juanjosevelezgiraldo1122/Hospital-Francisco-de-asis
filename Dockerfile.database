@@ -1,0 +1,6 @@
+FROM mysql:8.4
+
+# These scripts run once, in order, when MySQL initializes an empty data volume.
+COPY database/docker/01-schema.sql /docker-entrypoint-initdb.d/01-schema.sql
+COPY database/migrations/20261016_delivery_contact.sql /docker-entrypoint-initdb.d/02-delivery-contact.sql
+COPY database/docker/03-grant-app-user.sql /docker-entrypoint-initdb.d/03-grant-app-user.sql
