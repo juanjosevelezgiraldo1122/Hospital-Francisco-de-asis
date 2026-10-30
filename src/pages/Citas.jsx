@@ -1,23 +1,24 @@
 import { useMemo, useState } from 'react';
 import { CalendarCheck, CalendarX2, Clock, MapPin, Stethoscope } from 'lucide-react';
+import { todayInBogota } from '../../shared/date.js';
 import { useAppData } from '../store';
 
 const availableTimes = ['07:00', '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00'];
-const today = new Date().toISOString().slice(0, 10);
 
-const blankForm = {
+const blankForm = () => ({
   attentionType: '',
   doctorId: '',
   sede: '',
-  date: today,
+  date: todayInBogota(),
   time: '',
   reason: '',
-};
+});
 
 const statusClass = (status = '') => status.toLowerCase().replaceAll(' ', '-');
 
 export default function Citas() {
   const { currentUser, data, createAppointment, updateAppointment } = useAppData();
+  const today = todayInBogota();
   const [form, setForm] = useState(blankForm);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -79,7 +80,7 @@ export default function Citas() {
     }
 
     setMessage('Cita creada en estado Pendiente. El horario quedo reservado.');
-    setForm(blankForm);
+    setForm(blankForm());
   };
 
   const cancelAppointment = async (appointmentId) => {

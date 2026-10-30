@@ -2,6 +2,7 @@ import { getAuthenticatedUser } from './auth.js';
 import { pool } from './db.js';
 import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
 import { promisify } from 'node:util';
+import { todayInBogota } from '../shared/date.js';
 
 const scrypt = promisify(scryptCallback);
 
@@ -206,8 +207,7 @@ export async function handleLiveDataRequest(request, response, url) {
         const [[doctor]] = await connection.execute(`SELECT m.NUMERO_LICENCIA FROM medico m JOIN usuario u ON u.ID_USUARIO=m.ID_USUARIO WHERE m.ID_USUARIO=? AND u.ESTADO='activo' FOR UPDATE`, [doctorId]);
         const [[site]] = await connection.execute('SELECT ID_SEDE FROM sede WHERE (ID_SEDE=? OR NOMBRE=?) AND ACTIVA=1 LIMIT 1', [body.sedeId || 0, body.sede || '']);
         if (!patient || !doctor || !site) throw fail(400, 'Paciente, médico o sede no están disponibles.');
-        const [[current]] = await connection.execute('SELECT CURRENT_DATE AS HOY', []);
-        if (body.date < String(current.HOY).slice(0,10)) throw fail(400, 'No puedes reservar una cita en una fecha pasada.');
+        if (body.date < todayInBogota()) throw fail(400, 'No puedes reservar una cita en una fecha pasada.');
         const [overlap] = await connection.execute(`SELECT ID_CITA FROM cita WHERE FECHA_CITA=? AND HORA_CITA=? AND ESTADO IN ('Pendiente','En curso') AND (ID_PACIENTE=? OR NUMERO_LICENCIA=?) FOR UPDATE`, [body.date,`${body.time}:00`,patientId,doctor.NUMERO_LICENCIA]);
         if (overlap.length) throw fail(409, 'El paciente o médico ya tiene una cita en ese horario.');
         const [insert] = await connection.execute(`INSERT INTO cita (ID_PACIENTE,NUMERO_LICENCIA,ID_SEDE,GESTIONADA_POR,FECHA_CITA,HORA_CITA,TIPO_ATENCION,MOTIVO) VALUES (?,?,?,?,?,?,?,?)`, [patientId,doctor.NUMERO_LICENCIA,site.ID_SEDE,user.role==='patient'?null:user.databaseId,body.date,`${body.time}:00`,body.attentionType==='general'?'general':'especialista',String(body.reason).slice(0,500)]);
