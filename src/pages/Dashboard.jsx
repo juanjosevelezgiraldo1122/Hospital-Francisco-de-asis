@@ -16,6 +16,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { useAppData } from '../store';
+import { deliveryMapLinks } from '../shared/deliveryMapLinks';
 
 const today = new Date().toISOString().slice(0, 10);
 const statusClass = (status = '') => status.toLowerCase().replaceAll(' ', '-');
@@ -195,13 +196,19 @@ export default function Dashboard() {
               <label className="dashboard-order-search"><Search size={17} /><input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Buscar por pedido o medicamento" aria-label="Buscar medicamentos en mis pedidos" /></label>
               {visiblePatientDeliveries.length ? (
                 <div className="dashboard-order-list">
-                  {visiblePatientDeliveries.slice().reverse().map((delivery) => (
+                  {visiblePatientDeliveries.slice().reverse().map((delivery) => {
+                    const mapLinks = deliveryMapLinks(delivery.location);
+                    return (
                     <article key={delivery.id}>
                       <span className="dashboard-order-icon"><PackageCheck size={19} /></span>
                       <div className="dashboard-order-main"><strong>Solicitud {delivery.id}</strong><small>{delivery.items?.map((item) => `${item.medicine} × ${item.quantity}`).join(', ') || `${delivery.prescriptionIds?.length || 0} medicamentos`}</small></div>
                       <span className="dashboard-order-status">{delivery.orderStatus || 'Recibido'}</span>
+                      {mapLinks ? (
+                        <a className="dashboard-order-location" href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer">Ver destino</a>
+                      ) : null}
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : <p className="dashboard-order-empty">No hay pedidos que coincidan con la búsqueda.</p>}
             </>

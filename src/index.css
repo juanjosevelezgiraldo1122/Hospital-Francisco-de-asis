@@ -4742,6 +4742,152 @@ dd {
   .home-session-progress span { animation: none; transform: scaleX(var(--welcome-progress-start, 1)); }
 }
 
+/* Selección y confirmación de ubicación para pedidos de farmacia */
+.delivery-location-section {
+  display: grid;
+  gap: 11px;
+  border-top: 1px solid var(--gray-200);
+  padding-top: 16px;
+}
+
+.delivery-location-heading h3 {
+  margin: 4px 0 5px;
+  color: var(--blue-900);
+  font-size: 1rem;
+}
+
+.delivery-location-heading p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.delivery-location-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.delivery-location-map-loading {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  color: var(--gray-600);
+  background: var(--sky-50);
+  font-size: 0.84rem;
+}
+
+.delivery-location-map {
+  width: 100%;
+  height: 250px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--sky-50);
+  z-index: 0;
+}
+
+.delivery-location-map.leaflet-container {
+  font: inherit;
+}
+
+.delivery-location-marker {
+  border: 0;
+  background: transparent;
+}
+
+.delivery-location-marker span {
+  display: block;
+  width: 23px;
+  height: 23px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: var(--blue-800);
+  box-shadow: 0 2px 8px rgb(11 49 88 / 42%);
+  transform: rotate(-45deg);
+}
+
+.delivery-location-controls,
+.delivery-location-confirm-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.delivery-location-current {
+  min-height: 38px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+}
+
+.delivery-location-status,
+.delivery-location-confirmed,
+.delivery-location-unconfirmed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--gray-600);
+  font-size: 0.76rem;
+}
+
+.delivery-location-status.is-selected,
+.delivery-location-confirmed {
+  color: var(--blue-800);
+  font-weight: 800;
+}
+
+.delivery-location-confirm-row .btn {
+  min-height: 38px;
+  padding: 7px 11px;
+  font-size: 0.78rem;
+}
+
+.delivery-location-attribution {
+  color: var(--gray-500);
+  font-size: 0.68rem;
+}
+
+.delivery-location-error {
+  margin: 0;
+  color: #9a3412;
+  font-size: 0.78rem;
+}
+
+.delivery-map-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  color: var(--blue-800);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.delivery-map-links a,
+.dashboard-order-location {
+  color: var(--blue-800);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dashboard-order-location {
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .delivery-location-map { height: 215px; }
+  .delivery-location-confirm-row { align-items: flex-start; flex-direction: column; }
+  .delivery-location-confirm-row .btn { width: 100%; justify-content: center; }
+  .delivery-map-links { align-items: flex-start; flex-direction: column; }
+  .dashboard-order-location { grid-column: 2 / -1; }
+}
+
 .home-portal-content {
   display: grid;
   gap: 30px;

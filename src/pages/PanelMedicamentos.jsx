@@ -7,7 +7,9 @@ import {
   Plus,
   Search,
   Save,
+  MapPin,
 } from 'lucide-react';
+import { deliveryMapLinks } from '../shared/deliveryMapLinks';
 import { useAppData } from '../store';
 
 const orderStatuses = ['Todos', 'Recibido', 'Preparando', 'Enviado', 'Entregado', 'Cancelado'];
@@ -137,7 +139,9 @@ export default function PanelMedicamentos() {
 
         {visibleOrders.length ? (
           <div className="admin-order-list">
-            {visibleOrders.map((order) => (
+            {visibleOrders.map((order) => {
+              const mapLinks = deliveryMapLinks(order.location);
+              return (
               <article key={order.id}>
                 <header>
                   <div><PackageSearch size={20} /><strong>{order.id}</strong></div>
@@ -156,8 +160,16 @@ export default function PanelMedicamentos() {
                   {(order.items || []).map((item, index) => <span key={`${item.medicine}-${index}`}><PackageCheck size={15} />{item.medicine} × {item.quantity}</span>)}
                   {!(order.items || []).length ? order.prescriptionIds?.map((item) => <span key={item}><PackageCheck size={15} />{item}</span>) : null}
                 </div>
+                {mapLinks ? (
+                  <div className="delivery-map-links">
+                    <MapPin size={16} />
+                    <a href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer">Abrir destino en Google Maps</a>
+                    <a href={mapLinks.waze} target="_blank" rel="noopener noreferrer">Abrir en Waze</a>
+                  </div>
+                ) : null}
               </article>
-            ))}
+              );
+            })}
           </div>
         ) : <p className="empty-state">{data.deliveries.length ? 'No hay pedidos que coincidan con estos filtros.' : 'Los pedidos de los pacientes apareceran aqui en tiempo real.'}</p>}
       </section>

@@ -58,6 +58,8 @@ export async function checkDatabaseConnection() {
     ['usuario', 'MUNICIPIO'],
     ['solicitud_envio', 'EMAIL_CONTACTO'],
     ['solicitud_envio', 'NOTAS_ENTREGA'],
+    ['solicitud_envio', 'LATITUD_ENTREGA'],
+    ['solicitud_envio', 'LONGITUD_ENTREGA'],
     ['password_reset_token', 'TOKEN_HASH'],
     ['password_reset_token', 'EXPIRA_EN'],
     ['password_reset_token', 'USADO_EN'],

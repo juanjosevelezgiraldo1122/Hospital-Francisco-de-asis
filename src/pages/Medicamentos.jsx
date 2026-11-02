@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -13,6 +13,8 @@ import {
   Truck,
 } from 'lucide-react';
 import { useAppData } from '../store';
+
+const DeliveryLocationPicker = lazy(() => import('../components/DeliveryLocationPicker'));
 
 const prescriptionKey = (prescription) =>
   prescription.id || `${prescription.appointmentId}-${prescription.medicine}`;
@@ -33,7 +35,9 @@ export default function Medicamentos() {
     email: currentUser.email || '',
     deliveryNotes: '',
     payment: 'en_linea',
+    location: null,
   });
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [confirmed, setConfirmed] = useState('');
   const [error, setError] = useState('');
 
@@ -59,6 +63,10 @@ export default function Medicamentos() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!isPatient || !selectedPrescriptions.length) return;
+    if (!delivery.location || !locationConfirmed) {
+      setError('Marca y confirma el punto de entrega en el mapa antes de continuar.');
+      return;
+    }
 
     const result = await createDelivery({
       address: delivery.address,
@@ -66,6 +74,7 @@ export default function Medicamentos() {
       email: delivery.email,
       deliveryNotes: delivery.deliveryNotes,
       paymentMethod: delivery.payment,
+      location: delivery.location,
       items: selectedPrescriptions.map((prescription) => ({
         prescriptionId: prescriptionKey(prescription),
         medicine: prescription.medicine,
@@ -213,11 +222,45 @@ export default function Medicamentos() {
                 <span><MapPin size={14} /> Dirección de entrega</span>
                 <input
                   value={delivery.address}
-                  onChange={(event) => setDelivery((current) => ({ ...current, address: event.target.value }))}
+                  onChange={(event) => {
+                    setDelivery((current) => ({ ...current, address: event.target.value }));
+                    setLocationConfirmed(false);
+                  }}
                   autoComplete="street-address"
                   required
                 />
               </label>
+              <section className="delivery-location-section" aria-labelledby="delivery-map-title">
+                <div className="delivery-location-heading">
+                  <span className="medicine-section-label">Ubicación exacta</span>
+                  <h3 id="delivery-map-title">Marca dónde recibirás el pedido</h3>
+                  <p>Mueve el mapa y haz clic en el punto de entrega. También puedes usar tu ubicación actual y ajustar el marcador.</p>
+                  <p className="delivery-location-privacy">El punto confirmado se guardará junto con el pedido para orientar la entrega.</p>
+                </div>
+                <Suspense fallback={<div className="delivery-location-map-loading" role="status">Cargando mapa…</div>}>
+                  <DeliveryLocationPicker
+                    value={delivery.location}
+                    onChange={(location) => {
+                      setDelivery((current) => ({ ...current, location }));
+                      setLocationConfirmed(false);
+                      setError('');
+                    }}
+                  />
+                </Suspense>
+                <div className="delivery-location-confirm-row">
+                  <span className={locationConfirmed ? 'delivery-location-confirmed' : 'delivery-location-unconfirmed'} role="status">
+                    {locationConfirmed ? 'Dirección y punto confirmados' : 'Confirma el punto seleccionado para continuar'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => { setLocationConfirmed(true); setError(''); }}
+                    disabled={!delivery.location || !delivery.address.trim()}
+                  >
+                    <MapPin size={16} /> Confirmar punto
+                  </button>
+                </div>
+              </section>
               <label>
                 Indicaciones <small className="medicine-optional">Opcional</small>
                 <textarea
