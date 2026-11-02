@@ -4671,34 +4671,48 @@ dd {
   background: var(--sky-100);
 }
 
-.home-session {
-  position: absolute;
-  right: max(22px, calc((100vw - 1280px) / 2));
-  bottom: 28px;
+.home-session-notice {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: auto 1fr;
+  width: fit-content;
+  max-width: min(460px, calc(100% - 40px));
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 2px 10px;
   align-items: center;
-  max-width: 300px;
-  border: 1px solid rgb(255 255 255 / 40%);
-  border-radius: 8px;
-  padding: 12px 15px;
-  color: #fff;
-  background: color-mix(in srgb, var(--blue-900) 82%, transparent);
-  backdrop-filter: blur(10px);
+  margin: 18px max(20px, calc((100vw - 1280px) / 2)) 0 auto;
+  border: 1px solid color-mix(in srgb, var(--blue-700) 16%, #fff);
+  border-radius: 10px;
+  padding: 11px 15px;
+  color: var(--blue-900);
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(18 55 88 / 10%);
+  animation: home-welcome-enter 220ms ease-out both;
 }
 
-.home-session svg {
+.home-session-notice svg {
   grid-row: span 2;
+  color: var(--blue-700);
 }
 
-.home-session span {
-  color: rgb(255 255 255 / 78%);
-  font-size: 0.78rem;
+.home-session-notice span {
+  color: var(--gray-500);
+  font-size: 0.76rem;
 }
 
-.home-session strong {
-  color: #fff;
+.home-session-notice strong {
+  overflow-wrap: anywhere;
+  color: var(--blue-900);
+  font-size: 0.92rem;
+}
+
+@keyframes home-welcome-enter {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-session-notice { animation: none; }
 }
 
 .home-portal-content {
@@ -5380,11 +5394,6 @@ dd {
     padding: 44px 24px;
   }
 
-  .home-session {
-    right: 24px;
-    bottom: 18px;
-  }
-
   .doctor-unified-grid {
     grid-template-columns: 1fr;
   }
@@ -5434,13 +5443,6 @@ dd {
 
   .home-hero-content h1 {
     font-size: 2.25rem;
-  }
-
-  .home-session {
-    right: 20px;
-    bottom: 16px;
-    left: 20px;
-    max-width: none;
   }
 
   .home-portal-content {

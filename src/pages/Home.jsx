@@ -248,9 +248,10 @@ function PublicHome() {
 }
 
 function AuthenticatedHome() {
-  const { currentUser } = useAppData();
+  const { currentUser, loginWelcome } = useAppData();
   const [activeSlide, setActiveSlide] = useState(0);
   const [carouselPaused, setCarouselPaused] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const shortcuts = shortcutsByRole[currentUser.role] || shortcutsByRole.patient;
   const relatedLinks = relatedLinksByRole[currentUser.role] || relatedLinksByRole.patient;
   const slide = informationSlides[activeSlide];
@@ -263,12 +264,34 @@ function AuthenticatedHome() {
     return () => window.clearInterval(interval);
   }, [carouselPaused]);
 
+  useEffect(() => {
+    if (!loginWelcome || loginWelcome.userId !== currentUser.id) {
+      setShowWelcome(false);
+      return undefined;
+    }
+    const remaining = 10_000 - (Date.now() - loginWelcome.startedAt);
+    if (remaining <= 0) {
+      setShowWelcome(false);
+      return undefined;
+    }
+    setShowWelcome(true);
+    const timeout = window.setTimeout(() => setShowWelcome(false), remaining);
+    return () => window.clearTimeout(timeout);
+  }, [currentUser.id, loginWelcome]);
+
   const showSlide = (direction) => {
     setActiveSlide((current) => (current + direction + informationSlides.length) % informationSlides.length);
   };
 
   return (
     <section className="home-portal">
+      {showWelcome && (
+        <div className="home-session-notice" role="status" aria-live="polite">
+          <ShieldCheck size={21} aria-hidden="true" />
+          <span>Bienvenido</span>
+          <strong>{currentUser.name}</strong>
+        </div>
+      )}
       <header className="hospital-hero home-hero-compact">
         <video className="hero-video" autoPlay muted loop playsInline preload="metadata" poster="/hospital-hero.svg" aria-hidden="true">
           <source src={heroVideoUrl} type="video/mp4" />
@@ -279,11 +302,6 @@ function AuthenticatedHome() {
           <h1>Te acompañamos en cada paso de tu atención</h1>
           <p>{roleCopy[currentUser.role]}</p>
         </div>
-        <aside className="home-session">
-          <ShieldCheck size={22} />
-          <span>Bienvenido</span>
-          <strong>{currentUser.name}</strong>
-        </aside>
       </header>
 
       <div className="page-content home-portal-content">

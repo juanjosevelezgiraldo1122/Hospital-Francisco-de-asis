@@ -11,6 +11,7 @@ const databaseId = (value) => Number(String(value || '').replace(/^PAT-DB-/, '')
 export function AppDataProvider({ children }) {
   const [data, setData] = useState(emptyData);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loginWelcome, setLoginWelcome] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const refreshData = useCallback(async () => {
@@ -23,6 +24,7 @@ export function AppDataProvider({ children }) {
 
   const acceptAuthenticatedUser = useCallback(async (profile) => {
     setCurrentUser(profile);
+    setLoginWelcome({ userId: profile.id, startedAt: Date.now() });
     setData(emptyData);
     try {
       await refreshData();
@@ -94,6 +96,7 @@ export function AppDataProvider({ children }) {
 
   const logout = useCallback(async () => {
     setCurrentUser(null);
+    setLoginWelcome(null);
     setData(emptyData);
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
   }, []);
@@ -162,7 +165,7 @@ export function AppDataProvider({ children }) {
 
   return (
     <AppDataContext.Provider value={{
-      data, currentUser, loading, isAuthenticated: Boolean(currentUser), login, logout,
+      data, currentUser, loginWelcome, loading, isAuthenticated: Boolean(currentUser), login, logout,
       acceptAuthenticatedUser, refreshData, registerPatient, updateUserAddress, updateUserProfile, addDoctor,
       addSecretary, updateUserRole, updateDoctor, createAppointment, createAppointmentForSecretary,
       rescheduleAppointment, registerPatientBySecretary, updateAppointment, startAppointment,
