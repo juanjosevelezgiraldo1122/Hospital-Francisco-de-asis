@@ -285,31 +285,6 @@ function AuthenticatedHome() {
 
   return (
     <section className="home-portal">
-      {welcomeNotice && (
-        <div className="home-session-notice" role="status" aria-live="polite">
-          <div className="home-session-notice-copy">
-            <ShieldCheck size={21} aria-hidden="true" />
-            <span>Bienvenido</span>
-            <strong>{currentUser.name}</strong>
-          </div>
-          <div
-            className="home-session-progress"
-            role="progressbar"
-            aria-label="Tiempo restante del mensaje de bienvenida"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(welcomeNotice.progress * 100)}
-          >
-            <span
-              key={`${loginWelcome.startedAt}-${welcomeNotice.duration}`}
-              style={{
-                '--welcome-progress-duration': `${welcomeNotice.duration}ms`,
-                '--welcome-progress-start': welcomeNotice.progress,
-              }}
-            />
-          </div>
-        </div>
-      )}
       <header className="hospital-hero home-hero-compact">
         <video className="hero-video" autoPlay muted loop playsInline preload="metadata" poster="/hospital-hero.svg" aria-hidden="true">
           <source src={heroVideoUrl} type="video/mp4" />
@@ -323,6 +298,31 @@ function AuthenticatedHome() {
       </header>
 
       <div className="page-content home-portal-content">
+        {welcomeNotice && (
+          <div className="home-session-notice" role="status" aria-live="polite">
+            <div className="home-session-notice-copy">
+              <ShieldCheck size={18} aria-hidden="true" />
+              <span>Bienvenido</span>
+              <strong>{currentUser.name}</strong>
+            </div>
+            <div
+              className="home-session-progress"
+              role="progressbar"
+              aria-label="Tiempo restante del mensaje de bienvenida"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(welcomeNotice.progress * 100)}
+            >
+              <span
+                key={`${loginWelcome.startedAt}-${welcomeNotice.duration}`}
+                style={{
+                  '--welcome-progress-duration': `${welcomeNotice.duration}ms`,
+                  '--welcome-progress-start': welcomeNotice.progress,
+                }}
+              />
+            </div>
+          </div>
+        )}
         <section className="home-services" aria-labelledby="services-title">
           <div className="home-section-heading">
             <div>

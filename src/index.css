@@ -4674,9 +4674,10 @@ dd {
 .home-session-notice {
   position: relative;
   z-index: 1;
-  width: min(420px, calc(100% - 40px));
+  width: min(310px, 100%);
   overflow: hidden;
-  margin: 16px max(20px, calc((100vw - 1280px) / 2)) 12px auto;
+  justify-self: end;
+  margin: -14px 0 -10px auto;
   border: 1px solid rgb(255 255 255 / 32%);
   border-radius: 9px;
   color: #fff;
@@ -4688,11 +4689,11 @@ dd {
 
 .home-session-notice-copy {
   display: grid;
-  min-height: 62px;
+  min-height: 54px;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 2px 10px;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
 }
 
 .home-session-notice-copy svg {
@@ -4708,7 +4709,7 @@ dd {
 .home-session-notice-copy strong {
   overflow-wrap: anywhere;
   color: #fff;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
 
 .home-session-progress {
