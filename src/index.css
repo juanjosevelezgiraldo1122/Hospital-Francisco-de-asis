@@ -4674,36 +4674,61 @@ dd {
 .home-session-notice {
   position: relative;
   z-index: 1;
-  display: grid;
-  width: fit-content;
-  max-width: min(460px, calc(100% - 40px));
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px 10px;
-  align-items: center;
-  margin: 18px max(20px, calc((100vw - 1280px) / 2)) 0 auto;
-  border: 1px solid color-mix(in srgb, var(--blue-700) 16%, #fff);
-  border-radius: 10px;
-  padding: 11px 15px;
-  color: var(--blue-900);
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(18 55 88 / 10%);
+  width: min(420px, calc(100% - 40px));
+  overflow: hidden;
+  margin: 16px max(20px, calc((100vw - 1280px) / 2)) 12px auto;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 9px;
+  color: #fff;
+  background: color-mix(in srgb, var(--blue-900) 88%, transparent);
+  box-shadow: 0 8px 22px rgb(10 35 60 / 18%);
+  backdrop-filter: blur(10px);
   animation: home-welcome-enter 220ms ease-out both;
 }
 
-.home-session-notice svg {
-  grid-row: span 2;
-  color: var(--blue-700);
+.home-session-notice-copy {
+  display: grid;
+  min-height: 62px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  align-items: center;
+  padding: 10px 14px;
 }
 
-.home-session-notice span {
-  color: var(--gray-500);
+.home-session-notice-copy svg {
+  grid-row: span 2;
+  color: #fff;
+}
+
+.home-session-notice-copy span {
+  color: rgb(255 255 255 / 78%);
   font-size: 0.76rem;
 }
 
-.home-session-notice strong {
+.home-session-notice-copy strong {
   overflow-wrap: anywhere;
-  color: var(--blue-900);
+  color: #fff;
   font-size: 0.92rem;
+}
+
+.home-session-progress {
+  height: 3px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 18%);
+}
+
+.home-session-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(var(--welcome-progress-start, 1));
+  transform-origin: left center;
+  background: #7dd3fc;
+  animation: home-welcome-countdown var(--welcome-progress-duration, 10s) linear forwards;
+}
+
+@keyframes home-welcome-countdown {
+  to { transform: scaleX(0); }
 }
 
 @keyframes home-welcome-enter {
@@ -4713,6 +4738,7 @@ dd {
 
 @media (prefers-reduced-motion: reduce) {
   .home-session-notice { animation: none; }
+  .home-session-progress span { animation: none; transform: scaleX(var(--welcome-progress-start, 1)); }
 }
 
 .home-portal-content {
