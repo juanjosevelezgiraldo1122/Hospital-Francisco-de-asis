@@ -6083,9 +6083,10 @@ dd {
 
 .medication-inventory-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(100px, 130px) auto;
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: end;
+  gap: 11px 14px;
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   padding: 12px;
@@ -6094,7 +6095,9 @@ dd {
 
 .medication-inventory-name {
   display: flex;
+  grid-column: 1 / -1;
   min-width: 0;
+  min-height: 36px;
   align-items: center;
   gap: 9px;
 }
@@ -6117,18 +6120,22 @@ dd {
 }
 
 .medication-inventory-item > label {
-  gap: 4px;
+  display: grid;
+  min-width: 0;
+  gap: 5px;
   color: var(--gray-500);
   font-size: 0.72rem;
 }
 
 .medication-inventory-item input {
   min-width: 0;
-  padding: 7px 8px;
+  min-height: 38px;
+  padding: 7px 9px;
 }
 
 .medication-inventory-item .btn {
   min-height: 38px;
+  align-self: end;
   padding: 7px 9px;
   white-space: nowrap;
   font-size: 0.76rem;
@@ -6182,11 +6189,11 @@ dd {
   }
 
   .medication-inventory-item {
-    grid-template-columns: minmax(0, 1fr) 96px;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .medication-inventory-item .btn {
-    grid-column: 1 / -1;
+    grid-column: 2;
   }
 }
 
@@ -7334,6 +7341,8 @@ dd {
 .medicine-order-form > label { display: grid; align-content: start; }
 .medicine-order-form label > span,
 .medicine-contact-grid label > span { gap: 6px; color: var(--gray-700); }
+.medicine-notes-label { width: 100%; justify-content: space-between; }
+.medicine-notes-label .medicine-optional { margin-left: auto; }
 .medicine-order-form input,
 .medicine-order-form select { min-height: 42px; padding: 9px 11px; font-size: 0.88rem; }
 .medicine-order-form textarea { min-height: 66px; padding: 9px 11px; font-size: 0.88rem; }

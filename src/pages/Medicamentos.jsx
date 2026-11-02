@@ -261,8 +261,8 @@ export default function Medicamentos() {
                   </button>
                 </div>
               </section>
-              <label>
-                Indicaciones <small className="medicine-optional">Opcional</small>
+              <label className="medicine-notes-field">
+                <span className="medicine-notes-label">Indicaciones <small className="medicine-optional">Opcional</small></span>
                 <textarea
                   value={delivery.deliveryNotes}
                   onChange={(event) => setDelivery((current) => ({ ...current, deliveryNotes: event.target.value }))}
