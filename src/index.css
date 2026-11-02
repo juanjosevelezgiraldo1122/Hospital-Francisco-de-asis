@@ -4745,9 +4745,14 @@ dd {
 /* Selección y confirmación de ubicación para pedidos de farmacia */
 .delivery-location-section {
   display: grid;
-  gap: 11px;
-  border-top: 1px solid var(--gray-200);
-  padding-top: 16px;
+  grid-template-columns: minmax(0, 1.32fr) minmax(220px, 0.68fr);
+  grid-template-rows: auto 1fr;
+  align-items: start;
+  gap: 18px 26px;
+  border: 1px solid #d9e7f1;
+  border-radius: 10px;
+  padding: 20px;
+  background: linear-gradient(135deg, #f8fcff, #f1f8fd);
 }
 
 .delivery-location-heading h3 {
@@ -4755,6 +4760,8 @@ dd {
   color: var(--blue-900);
   font-size: 1rem;
 }
+
+.delivery-location-heading { grid-column: 2; grid-row: 1; }
 
 .delivery-location-heading p {
   margin: 0;
@@ -4765,6 +4772,8 @@ dd {
 
 .delivery-location-picker {
   display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
   gap: 8px;
   min-width: 0;
 }
@@ -4782,39 +4791,26 @@ dd {
 
 .delivery-location-map {
   width: 100%;
-  height: 250px;
-  border: 1px solid var(--gray-200);
-  border-radius: 8px;
-  background: var(--sky-50);
-  z-index: 0;
+  height: 340px;
+  background: #e9f1f6;
 }
 
-.delivery-location-map.leaflet-container {
-  font: inherit;
-}
-
-.delivery-location-marker {
-  border: 0;
-  background: transparent;
-}
-
-.delivery-location-marker span {
-  display: block;
-  width: 23px;
-  height: 23px;
-  border: 3px solid #fff;
-  border-radius: 50% 50% 50% 0;
-  background: var(--blue-800);
-  box-shadow: 0 2px 8px rgb(11 49 88 / 42%);
-  transform: rotate(-45deg);
-}
+.delivery-location-map-frame { position: relative; overflow: hidden; border: 1px solid #cbddea; border-radius: 9px; background: #e9f1f6; isolation: isolate; }
+.delivery-location-map-error { position: absolute; right: 14px; bottom: 42px; left: 14px; z-index: 3; border: 1px solid #edc8c0; border-radius: 7px; padding: 9px 12px; color: #7a3024; background: #fff7f4; font-size: 0.78rem; }
+.delivery-location-map .maplibregl-ctrl-top-right { top: 10px; right: 10px; }
+.delivery-location-map .maplibregl-ctrl-bottom-left { bottom: 3px; left: 7px; }
+.delivery-location-map .maplibregl-ctrl-group { overflow: hidden; border: 1px solid #d5e1ea; border-radius: 7px; box-shadow: 0 2px 8px rgb(17 44 69 / 15%); }
+.delivery-location-map .maplibregl-ctrl-attrib { border-radius: 5px; color: #435565; background: rgb(255 255 255 / 90%); font-size: 10px; }
+.delivery-location-map .maplibregl-ctrl-attrib a { color: var(--blue-800); }
+.delivery-location-map .maplibregl-marker { cursor: grab; }
+.delivery-location-map .maplibregl-marker:active { cursor: grabbing; }
 
 .delivery-location-controls,
 .delivery-location-confirm-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 9px;
 }
 
@@ -4846,9 +4842,22 @@ dd {
   font-size: 0.78rem;
 }
 
-.delivery-location-attribution {
-  color: var(--gray-500);
-  font-size: 0.68rem;
+.delivery-location-heading .delivery-location-privacy {
+  margin-top: 12px;
+  border-left: 3px solid #8fc4e5;
+  padding-left: 10px;
+  color: var(--blue-800);
+  font-size: 0.78rem;
+}
+
+.delivery-location-confirm-row {
+  grid-column: 2;
+  align-self: start;
+  flex-direction: column;
+  align-items: stretch;
+  margin-top: 4px;
+  border-top: 1px solid #dbe8f0;
+  padding-top: 14px;
 }
 
 .delivery-location-error {
@@ -4881,7 +4890,11 @@ dd {
 }
 
 @media (max-width: 520px) {
-  .delivery-location-map { height: 215px; }
+  .delivery-location-section { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 15px; }
+  .delivery-location-heading { grid-column: 1; grid-row: auto; }
+  .delivery-location-picker { grid-column: 1; grid-row: auto; }
+  .delivery-location-confirm-row { grid-column: 1; }
+  .delivery-location-map { height: 250px; }
   .delivery-location-confirm-row { align-items: flex-start; flex-direction: column; }
   .delivery-location-confirm-row .btn { width: 100%; justify-content: center; }
   .delivery-map-links { align-items: flex-start; flex-direction: column; }
@@ -7272,7 +7285,7 @@ dd {
 .medicine-order-form label > span { display: flex; align-items: center; }
 .medicine-kicker { gap: 8px; color: var(--blue-700); font-size: 0.76rem; font-weight: 900; text-transform: uppercase; }
 .medicine-view-label { min-height: 38px; flex: 0 0 auto; gap: 8px; border: 1px solid #c8dced; border-radius: 8px; padding: 8px 12px; color: var(--blue-800); background: #edf6fc; font-size: 0.85rem; font-weight: 800; }
-.medicine-workspace { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(340px, 0.82fr); align-items: start; gap: 30px; }
+.medicine-workspace { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 30px; }
 .medicine-prescriptions { min-width: 0; }
 .medicine-section-heading { justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .medicine-section-label { display: block; margin-bottom: 5px; color: var(--blue-700); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
@@ -7312,19 +7325,26 @@ dd {
 .medicine-empty-state > span { display: grid; width: 48px; height: 48px; place-items: center; margin-bottom: 12px; border-radius: 8px; color: var(--blue-700); background: #eaf3fa; }
 .medicine-empty-state strong { color: var(--gray-900); }
 .medicine-empty-state p { max-width: 340px; margin: 5px 0 0; color: var(--gray-500); font-size: 0.88rem; }
-.medicine-order-panel { position: sticky; top: 24px; min-width: 0; border: 1px solid #d6e3ee; border-radius: 8px; padding: 20px; background: var(--white); box-shadow: 0 14px 34px rgb(11 49 88 / 8%); }
+.medicine-order-panel { position: static; min-width: 0; border: 1px solid #d6e3ee; border-radius: 8px; padding: 24px; background: var(--white); box-shadow: 0 14px 34px rgb(11 49 88 / 8%); }
 .medicine-order-heading { gap: 12px; margin-bottom: 18px; }
 .medicine-order-icon { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border-radius: 8px; color: var(--blue-700); background: #eaf3fa; }
-.medicine-order-form { display: grid; gap: 13px; }
-.medicine-order-form label,
+.medicine-order-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.medicine-order-form > label,
 .medicine-contact-grid label { min-width: 0; gap: 6px; color: var(--gray-700); font-size: 0.82rem; font-weight: 800; }
+.medicine-order-form > label { display: grid; align-content: start; }
 .medicine-order-form label > span,
 .medicine-contact-grid label > span { gap: 6px; color: var(--gray-700); }
 .medicine-order-form input,
 .medicine-order-form select { min-height: 42px; padding: 9px 11px; font-size: 0.88rem; }
 .medicine-order-form textarea { min-height: 66px; padding: 9px 11px; font-size: 0.88rem; }
-.medicine-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.medicine-contact-grid { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px; }
 .medicine-contact-grid input { min-width: 0; }
+.medicine-order-form > .delivery-location-section,
+.medicine-order-form > .medicine-order-summary,
+.medicine-order-form > .form-message,
+.medicine-order-form > .medicine-submit,
+.medicine-address-field { grid-column: 1 / -1; }
+.medicine-payment-field { max-width: 460px; }
 .medicine-optional { color: var(--gray-500); font-size: 0.73rem; font-weight: 500; }
 .medicine-order-summary { border-top: 1px solid var(--gray-200); padding-top: 12px; }
 .medicine-order-summary-title { color: var(--blue-900); font-size: 0.82rem; }
@@ -7339,13 +7359,19 @@ dd {
 .medicine-clinical-note p { margin: 0; color: var(--gray-700); font-size: 0.88rem; }
 
 @media (max-width: 980px) {
-  .medicine-workspace { grid-template-columns: minmax(0, 1.2fr) minmax(310px, 0.8fr); gap: 18px; }
-  .medicine-order-panel { padding: 16px; }
+  .medicine-order-panel { padding: 20px; }
 }
 
 @media (max-width: 780px) {
-  .medicine-workspace { grid-template-columns: 1fr; }
-  .medicine-order-panel { position: static; }
+  .medicine-workspace { gap: 22px; }
+  .medicine-order-panel { padding: 17px; }
+  .medicine-order-form { grid-template-columns: minmax(0, 1fr); gap: 13px; }
+  .medicine-contact-grid,
+  .medicine-order-form > .delivery-location-section,
+  .medicine-order-form > .medicine-order-summary,
+  .medicine-order-form > .form-message,
+  .medicine-order-form > .medicine-submit { grid-column: 1; }
+  .medicine-payment-field { max-width: none; }
 }
 
 @media (max-width: 620px) {

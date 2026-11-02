@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import * as maplibregl from 'maplibre-gl';
+import { setWorkerUrl } from 'maplibre-gl';
+import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { LocateFixed, MapPin } from 'lucide-react';
 
-const colombiaCenter = [4.5709, -74.2973];
-const markerIcon = L.divIcon({
-  className: 'delivery-location-marker',
-  html: '<span></span>',
-  iconSize: [26, 30],
-  iconAnchor: [13, 28],
-});
+setWorkerUrl(mapLibreWorkerUrl);
 
-const normalizedPoint = (point) => ({
-  latitude: Number(Number(point.latitude).toFixed(7)),
-  longitude: Number(Number(point.longitude).toFixed(7)),
+const colombiaCenter = [-74.2973, 4.5709];
+const mapStyle = 'https://tiles.openfreemap.org/styles/liberty';
+
+const normalizedPoint = (latitude, longitude) => ({
+  latitude: Number(Number(latitude).toFixed(7)),
+  longitude: Number(Number(longitude).toFixed(7)),
 });
 
 export default function DeliveryLocationPicker({ value, onChange }) {
@@ -22,6 +21,7 @@ export default function DeliveryLocationPicker({ value, onChange }) {
   const onChangeRef = useRef(onChange);
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [mapError, setMapError] = useState('');
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -31,32 +31,49 @@ export default function DeliveryLocationPicker({ value, onChange }) {
     if (!mapContainerRef.current) return undefined;
 
     const hasInitialPoint = Number.isFinite(Number(value?.latitude)) && Number.isFinite(Number(value?.longitude));
-    const initialCenter = hasInitialPoint ? [Number(value.latitude), Number(value.longitude)] : colombiaCenter;
-    const map = L.map(mapContainerRef.current, { scrollWheelZoom: false }).setView(initialCenter, hasInitialPoint ? 16 : 5);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>',
-    }).addTo(map);
+    const initialCenter = hasInitialPoint
+      ? [Number(value.longitude), Number(value.latitude)]
+      : colombiaCenter;
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: mapStyle,
+      center: initialCenter,
+      zoom: hasInitialPoint ? 16 : 5,
+      cooperativeGestures: true,
+      attributionControl: false,
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-left');
 
     let marker = null;
     const placeMarker = (point, { notify = true, zoom = false } = {}) => {
-      const latLng = [Number(point.latitude), Number(point.longitude)];
-      if (marker) marker.setLatLng(latLng);
+      const longitude = Number(point.longitude);
+      const latitude = Number(point.latitude);
+      const coordinates = [longitude, latitude];
+      if (marker) marker.setLngLat(coordinates);
       else {
-        marker = L.marker(latLng, { icon: markerIcon, draggable: true, keyboard: true }).addTo(map);
+        marker = new maplibregl.Marker({ color: '#124a7c', draggable: true })
+          .setLngLat(coordinates)
+          .addTo(map);
         marker.on('dragend', () => {
-          const current = marker.getLatLng();
-          onChangeRef.current(normalizedPoint({ latitude: current.lat, longitude: current.lng }));
+          const current = marker.getLngLat();
+          onChangeRef.current(normalizedPoint(current.lat, current.lng));
         });
       }
-      if (zoom) map.setView(latLng, 17);
-      if (notify) onChangeRef.current(normalizedPoint(point));
+      if (zoom) map.easeTo({ center: coordinates, zoom: 17 });
+      if (notify) onChangeRef.current(normalizedPoint(latitude, longitude));
     };
 
-    map.on('click', (event) => placeMarker({ latitude: event.latlng.lat, longitude: event.latlng.lng }));
+    map.on('click', (event) => placeMarker({ latitude: event.lngLat.lat, longitude: event.lngLat.lng }));
+    map.on('load', () => {
+      setMapError('');
+      map.resize();
+    });
+    map.on('error', () => {
+      if (!map.isStyleLoaded()) setMapError('No se pudo cargar el mapa. Intenta recargar la página o marca el punto más tarde.');
+    });
     mapApiRef.current = { map, placeMarker };
-    if (hasInitialPoint) placeMarker({ latitude: initialCenter[0], longitude: initialCenter[1] }, { notify: false });
-    requestAnimationFrame(() => map.invalidateSize());
+    if (hasInitialPoint) placeMarker({ latitude: initialCenter[1], longitude: initialCenter[0] }, { notify: false });
 
     return () => {
       mapApiRef.current = null;
@@ -94,7 +111,10 @@ export default function DeliveryLocationPicker({ value, onChange }) {
 
   return (
     <div className="delivery-location-picker">
-      <div className="delivery-location-map" ref={mapContainerRef} aria-label="Mapa para marcar la ubicación de entrega" />
+      <div className="delivery-location-map-frame">
+        <div className="delivery-location-map" ref={mapContainerRef} aria-label="Mapa para marcar la ubicación de entrega" />
+        {mapError ? <div className="delivery-location-map-error" role="alert">{mapError}</div> : null}
+      </div>
       <div className="delivery-location-controls">
         <button type="button" className="btn btn-secondary delivery-location-current" onClick={useCurrentLocation} disabled={locating}>
           <LocateFixed size={16} /> {locating ? 'Buscando ubicación…' : 'Usar mi ubicación'}
@@ -104,7 +124,6 @@ export default function DeliveryLocationPicker({ value, onChange }) {
         </span>
       </div>
       {locationError ? <p className="delivery-location-error" role="alert">{locationError}</p> : null}
-      <small className="delivery-location-attribution">Mapa © OpenStreetMap contributors</small>
     </div>
   );
 }

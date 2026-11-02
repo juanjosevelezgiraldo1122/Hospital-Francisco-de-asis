@@ -218,7 +218,7 @@ export default function Medicamentos() {
                   />
                 </label>
               </div>
-              <label>
+              <label className="medicine-address-field">
                 <span><MapPin size={14} /> Dirección de entrega</span>
                 <input
                   value={delivery.address}
@@ -270,7 +270,7 @@ export default function Medicamentos() {
                   rows={2}
                 />
               </label>
-              <label>
+              <label className="medicine-payment-field">
                 <span><CreditCard size={14} /> Método de pago</span>
                 <select
                   value={delivery.payment}
