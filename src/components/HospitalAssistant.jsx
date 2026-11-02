@@ -3,11 +3,11 @@ import { Bot, CalendarDays, CircleHelp, MessageCircle, Pill, Send, ShieldCheck, 
 import { getLocalAssistantAnswer } from '../assistantLogic';
 import { useAppData } from '../store';
 
-const welcomeMessage = {
+const createWelcomeMessage = (name) => ({
   role: 'assistant',
-  content: 'Hola. Puedo orientarte sobre citas, medicamentos y servicios. Las fechas de tus citas y el estado de tus pedidos se consultan en esta sesion sin enviarlos a Gemini.',
+  content: `Hola ${name}. Puedo orientarte sobre citas, medicamentos y servicios. Las fechas de tus citas y el estado de tus pedidos se consultan en esta sesion sin enviarlos a Gemini.`,
   sentToAI: false,
-};
+});
 
 const promptsByRole = {
   patient: ['¿Cuándo es mi próxima cita?', '¿Cómo pido una cita?', '¿Cómo solicito medicamentos?', '¿Cómo va mi pedido?'],
@@ -22,7 +22,7 @@ export default function HospitalAssistant() {
   const { currentUser, data } = useAppData();
   const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState('');
-  const [messages, setMessages] = useState([welcomeMessage]);
+  const [messages, setMessages] = useState(() => [createWelcomeMessage(currentUser.name?.trim() || 'bienvenido/a')]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const messageListRef = useRef(null);
