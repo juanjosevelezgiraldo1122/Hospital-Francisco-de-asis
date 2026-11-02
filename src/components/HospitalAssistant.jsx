@@ -5,7 +5,7 @@ import { useAppData } from '../store';
 
 const createWelcomeMessage = (name) => ({
   role: 'assistant',
-  content: `Hola ${name}. Puedo orientarte sobre citas, medicamentos y servicios. Las fechas de tus citas y el estado de tus pedidos se consultan en esta sesion sin enviarlos a Gemini.`,
+  content: `Hola ${name}. Puedo orientarte sobre citas, medicamentos y servicios.`,
   sentToAI: false,
 });
 
